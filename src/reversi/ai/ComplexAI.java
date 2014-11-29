@@ -26,19 +26,19 @@ public class ComplexAI extends AI {
     protected static final int MAX_DEPTH = 7;
     //private static final int MAX_NODES = 3000000;
 
-    private int maxguaranteedDepth = 0;
+//    private int maxguaranteedDepth = 0;
 
     protected final int col;
     protected final int row;
     protected Owner turn;
-    private Node root;
+//    private Node root;
     private Point nextMove;
 
-    private long lastSleep;
+//    private long lastSleep;
 
-    private Queue<Node> queue;
-    private Queue<Node> bottomNodes;
-    private Queue<Node> parents;
+//    private Queue<Node> queue;
+//    private Queue<Node> bottomNodes;
+//    private Queue<Node> parents;
 
     private StackNode[] nodePool;
     private int stackNodeCount;
@@ -49,9 +49,9 @@ public class ComplexAI extends AI {
         col = gm.getColumns();
         row = gm.getRows();
 
-        queue = new LinkedBlockingQueue<>();
-        bottomNodes = new LinkedBlockingQueue<>();
-        parents = new LinkedBlockingQueue<>();
+//        queue = new LinkedBlockingQueue<>();
+//        bottomNodes = new LinkedBlockingQueue<>();
+//        parents = new LinkedBlockingQueue<>();
 
     }
 
@@ -195,200 +195,200 @@ public class ComplexAI extends AI {
         }
     }
 
-    private void nextMoveHelper() {
-        turn = gm.turnProperty().get();
-
-        System.out.println("building");
-
-        buildTree();
-
-        System.out.println("scoreing");
-
-        scoreBottomNodes();
-
-        System.out.println("minMaxing");
-
-        minMaxTree();
-
-        System.out.println("clearing up");
-
-        root = null;
-        queue = new LinkedBlockingQueue<>();
-        bottomNodes = new LinkedBlockingQueue<>();
-        parents = new LinkedBlockingQueue<>();
-        System.gc();
-
-        System.out.println("maxguaranteedDepth: " + maxguaranteedDepth);
-        System.out.println("done");
-
-        Platform.runLater(() -> {
-            ready.set(true);
-        });
-    }
-
-    private void delay() {
-        long now = System.currentTimeMillis();
-
-        if (now - lastSleep > 16) {
-            lastSleep = now;
-            Thread.yield();
-        }
-    }
-
-    private void buildTree() {
-        int nodeCount = 0;
-        int depth = 0;
-        int noMoveCount = 0;
-
-        root = new Node();
-        root.depth = 0;
-        root.lwb = makeFirstLWB();
-        root.id = nodeCount++;
-
-        queue.add(root);
-
-        do {
-            Node parent = queue.poll();
-            depth = parent.depth + 1;
-            //System.out.println("depth: "+depth+", NodeCount: "+ ++nodeCount);
-
-            if (depth > MAX_DEPTH) {
-                //System.out.println("bottom: " + parent);
-
-                bottomNodes.add(parent);
-                continue;
-//                while (!queue.isEmpty()) {
-//                    parent = queue.poll();
-//                    bottomNodes.add(parent);
-//                }
-//                return;
-            }
-            List< Point> list = parent.lwb.getLegalMoves();
-
-            if (list.isEmpty()) {
-                noMoveCount++;
-                //need logic for no moves
-                LightWeightBoard lwb = new LightWeightBoard(col, row, parent.lwb.getTurn(), parent.lwb.getBaord());
-                lwb.flipTurn();
-                Node child = new Node(lwb, parent, depth, null);
-                child.id = nodeCount++;
-                child.noMove = true;
-                if (parent.children == null) {
-                    parent.children = new LinkedList<>();
-                }
-                parent.children.add(child);
-
-//                if (parent.noMove) {
-//                    bottomNodes.add(child);
-//                } else {}
-                queue.add(child);
-
-                continue;
-            }
-
-            for (Point p : list) {
-
-                LightWeightBoard lwb = new LightWeightBoard(col, row, parent.lwb.getTurn(), parent.lwb.getBaord());
-                lwb.takeTurn(p.x, p.y);
-                Node child = new Node(lwb, parent, depth, p);
-                child.id = nodeCount++;
-                if (parent.children == null) {
-                    parent.children = new LinkedList<>();
-                }
-                parent.children.add(child);
-                queue.add(child);
-                //System.out.println(child);
-            }
-            parent.lwb = null;
-
-            // delay();
-        } while (!queue.isEmpty());//and all thread finished
-
-        maxguaranteedDepth = depth - 1;
-
-        System.out.println(
-                "noMoveCount: " + noMoveCount);
-    }
-
-    private void scoreBottomNodes() {
-        while (!bottomNodes.isEmpty()) {
-            Node node = bottomNodes.poll();
-            node.score = node.lwb.calculateScore(turn);
-
-            if (node.noMove && node.parent.noMove) {
-                if (node.score > 0) {
-                    node.score = 1000;
-                } else if (node.score < 0) {
-                    node.score = -1000;
-                }
-            }
-
-            if (node.parent.added == false) {
-                node.parent.added = true;
-                parents.add(node.parent);
-                //System.out.println("parent: " + node.parent);
-            }
-            //System.out.println(node);
-        }
-    }
-
-    private void minMaxTree() {
-        while (!parents.isEmpty()) {
-            Node node;
-            Node parent = parents.poll();
-
-            if (parent.depth % 2 == 0) {
-                node = getMaxChild(parent);
-            } else {
-                node = getMinChild(parent);
-            }
-            parent.score = node.score;
-
-//            System.out.println("parent: " + parent);
-//            for (Node n : parent.children) {
-//                System.out.println(n);
+//    private void nextMoveHelper() {
+//        turn = gm.turnProperty().get();
+//
+//        System.out.println("building");
+//
+//        buildTree();
+//
+//        System.out.println("scoreing");
+//
+//        scoreBottomNodes();
+//
+//        System.out.println("minMaxing");
+//
+//        minMaxTree();
+//
+//        System.out.println("clearing up");
+//
+//        root = null;
+//        queue = new LinkedBlockingQueue<>();
+//        bottomNodes = new LinkedBlockingQueue<>();
+//        parents = new LinkedBlockingQueue<>();
+//        System.gc();
+//
+//        System.out.println("maxguaranteedDepth: " + maxguaranteedDepth);
+//        System.out.println("done");
+//
+//        Platform.runLater(() -> {
+//            ready.set(true);
+//        });
+//    }
+//
+//    private void delay() {
+//        long now = System.currentTimeMillis();
+//
+//        if (now - lastSleep > 16) {
+//            lastSleep = now;
+//            Thread.yield();
+//        }
+//    }
+//
+//    private void buildTree() {
+//        int nodeCount = 0;
+//        int depth = 0;
+//        int noMoveCount = 0;
+//
+//        root = new Node();
+//        root.depth = 0;
+//        root.lwb = makeFirstLWB();
+//        root.id = nodeCount++;
+//
+//        queue.add(root);
+//
+//        do {
+//            Node parent = queue.poll();
+//            depth = parent.depth + 1;
+//            //System.out.println("depth: "+depth+", NodeCount: "+ ++nodeCount);
+//
+//            if (depth > MAX_DEPTH) {
+//                //System.out.println("bottom: " + parent);
+//
+//                bottomNodes.add(parent);
+//                continue;
+////                while (!queue.isEmpty()) {
+////                    parent = queue.poll();
+////                    bottomNodes.add(parent);
+////                }
+////                return;
 //            }
-            if (parent.parent != null && parent.parent.added == false) {
-                parent.parent.added = true;
-                parents.add(parent.parent);
-            }
-            if (parent.parent == null) {
-                nextMove = node.move;
-                System.out.println("nextMove: " + nextMove);
-//                System.out.println("parent: " + parent);
-//                for (Node n : parent.children) {
-//                    System.out.println(n);
+//            List< Point> list = parent.lwb.getLegalMoves();
+//
+//            if (list.isEmpty()) {
+//                noMoveCount++;
+//                //need logic for no moves
+//                LightWeightBoard lwb = new LightWeightBoard(col, row, parent.lwb.getTurn(), parent.lwb.getBaord());
+//                lwb.flipTurn();
+//                Node child = new Node(lwb, parent, depth, null);
+//                child.id = nodeCount++;
+//                child.noMove = true;
+//                if (parent.children == null) {
+//                    parent.children = new LinkedList<>();
 //                }
-            }
-        }
-
-    }
-
-    private Node getMaxChild(Node parent) {
-        Node maxNode = parent.children.get(0);
-
-        for (int i = 1; i < parent.children.size(); i++) {
-            Node n = parent.children.get(i);
-            if (n.score > maxNode.score) {
-                maxNode = n;
-            }
-        }
-
-        return maxNode;
-    }
-
-    private Node getMinChild(Node parent) {
-        Node minNode = parent.children.get(0);
-
-        for (int i = 1; i < parent.children.size(); i++) {
-            Node n = parent.children.get(i);
-            if (n.score < minNode.score) {
-                minNode = n;
-            }
-        }
-
-        return minNode;
-    }
+//                parent.children.add(child);
+//
+////                if (parent.noMove) {
+////                    bottomNodes.add(child);
+////                } else {}
+//                queue.add(child);
+//
+//                continue;
+//            }
+//
+//            for (Point p : list) {
+//
+//                LightWeightBoard lwb = new LightWeightBoard(col, row, parent.lwb.getTurn(), parent.lwb.getBaord());
+//                lwb.takeTurn(p.x, p.y);
+//                Node child = new Node(lwb, parent, depth, p);
+//                child.id = nodeCount++;
+//                if (parent.children == null) {
+//                    parent.children = new LinkedList<>();
+//                }
+//                parent.children.add(child);
+//                queue.add(child);
+//                //System.out.println(child);
+//            }
+//            parent.lwb = null;
+//
+//            // delay();
+//        } while (!queue.isEmpty());//and all thread finished
+//
+//        maxguaranteedDepth = depth - 1;
+//
+//        System.out.println(
+//                "noMoveCount: " + noMoveCount);
+//    }
+//
+//    private void scoreBottomNodes() {
+//        while (!bottomNodes.isEmpty()) {
+//            Node node = bottomNodes.poll();
+//            node.score = node.lwb.calculateScore(turn);
+//
+//            if (node.noMove && node.parent.noMove) {
+//                if (node.score > 0) {
+//                    node.score = 1000;
+//                } else if (node.score < 0) {
+//                    node.score = -1000;
+//                }
+//            }
+//
+//            if (node.parent.added == false) {
+//                node.parent.added = true;
+//                parents.add(node.parent);
+//                //System.out.println("parent: " + node.parent);
+//            }
+//            //System.out.println(node);
+//        }
+//    }
+//
+//    private void minMaxTree() {
+//        while (!parents.isEmpty()) {
+//            Node node;
+//            Node parent = parents.poll();
+//
+//            if (parent.depth % 2 == 0) {
+//                node = getMaxChild(parent);
+//            } else {
+//                node = getMinChild(parent);
+//            }
+//            parent.score = node.score;
+//
+////            System.out.println("parent: " + parent);
+////            for (Node n : parent.children) {
+////                System.out.println(n);
+////            }
+//            if (parent.parent != null && parent.parent.added == false) {
+//                parent.parent.added = true;
+//                parents.add(parent.parent);
+//            }
+//            if (parent.parent == null) {
+//                nextMove = node.move;
+//                System.out.println("nextMove: " + nextMove);
+////                System.out.println("parent: " + parent);
+////                for (Node n : parent.children) {
+////                    System.out.println(n);
+////                }
+//            }
+//        }
+//
+//    }
+//
+//    private Node getMaxChild(Node parent) {
+//        Node maxNode = parent.children.get(0);
+//
+//        for (int i = 1; i < parent.children.size(); i++) {
+//            Node n = parent.children.get(i);
+//            if (n.score > maxNode.score) {
+//                maxNode = n;
+//            }
+//        }
+//
+//        return maxNode;
+//    }
+//
+//    private Node getMinChild(Node parent) {
+//        Node minNode = parent.children.get(0);
+//
+//        for (int i = 1; i < parent.children.size(); i++) {
+//            Node n = parent.children.get(i);
+//            if (n.score < minNode.score) {
+//                minNode = n;
+//            }
+//        }
+//
+//        return minNode;
+//    }
 
     private LightWeightBoard makeFirstLWB() {
 
@@ -404,41 +404,41 @@ public class ComplexAI extends AI {
 
     }
 
-    private static class Node {
-
-        boolean noMove;
-        int id;
-        LightWeightBoard lwb;
-        boolean added;
-        int score;
-        int depth;
-        Node parent;
-        List<Node> children;// = new LinkedList<>();
-        Point move;
-
-        public Node() {
-        }
-
-        public Node(LightWeightBoard lwb, Node parent, int depth, Point move) {
-            this.lwb = lwb;
-            this.parent = parent;
-            this.depth = depth;
-            this.move = move;
-        }
-
-        @Override
-        public String toString() {
-            String m;
-
-            if (move == null) {
-                m = ", move: null";
-            } else {
-                m = ", move: (" + move.x + "," + move.y + ")";
-            }
-
-            return "depth: " + depth + ", added: " + added + ", score: " + score + m + ", noMove: " + noMove + ", id: " + id;
-        }
-    }
+//    private static class Node {
+//
+//        boolean noMove;
+//        int id;
+//        LightWeightBoard lwb;
+//        boolean added;
+//        int score;
+//        int depth;
+//        Node parent;
+//        List<Node> children;// = new LinkedList<>();
+//        Point move;
+//
+//        public Node() {
+//        }
+//
+//        public Node(LightWeightBoard lwb, Node parent, int depth, Point move) {
+//            this.lwb = lwb;
+//            this.parent = parent;
+//            this.depth = depth;
+//            this.move = move;
+//        }
+//
+//        @Override
+//        public String toString() {
+//            String m;
+//
+//            if (move == null) {
+//                m = ", move: null";
+//            } else {
+//                m = ", move: (" + move.x + "," + move.y + ")";
+//            }
+//
+//            return "depth: " + depth + ", added: " + added + ", score: " + score + m + ", noMove: " + noMove + ", id: " + id;
+//        }
+//    }
 
     protected static class StackNode {
 
