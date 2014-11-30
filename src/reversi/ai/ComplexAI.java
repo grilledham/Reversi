@@ -27,7 +27,6 @@ public class ComplexAI extends AI {
     //private static final int MAX_NODES = 3000000;
 
 //    private int maxguaranteedDepth = 0;
-
     protected final int col;
     protected final int row;
     protected Owner turn;
@@ -35,13 +34,19 @@ public class ComplexAI extends AI {
     private Point nextMove;
 
 //    private long lastSleep;
-
 //    private Queue<Node> queue;
 //    private Queue<Node> bottomNodes;
 //    private Queue<Node> parents;
-
     private StackNode[] nodePool;
     private int stackNodeCount;
+
+    private int maxMajorTick;
+    private int majorTickCount;
+    private int maxMinorTick;
+    private int minorTickCount;
+
+    private long then;
+    private long now;
 
     public ComplexAI(GameModel gm) {
         super(gm);
@@ -52,7 +57,6 @@ public class ComplexAI extends AI {
 //        queue = new LinkedBlockingQueue<>();
 //        bottomNodes = new LinkedBlockingQueue<>();
 //        parents = new LinkedBlockingQueue<>();
-
     }
 
     /**
@@ -72,8 +76,9 @@ public class ComplexAI extends AI {
 
     @Override
     public void requestNextMove() {
-        ready.set(false);
-        
+        readyProperty().set(false);
+        progressProperty().set(0);
+
         Thread thread = new Thread(() -> stackHelper());//-> nextMoveHelper());
         thread.setPriority(Thread.MIN_PRIORITY);
         thread.setDaemon(true);
@@ -84,6 +89,9 @@ public class ComplexAI extends AI {
     protected void stackHelper() {
         turn = gm.turnProperty().get();
         stackNodeCount = 0;
+
+        majorTickCount = 0;
+        minorTickCount = 0;
 
         nodePool = new StackNode[MAX_DEPTH + 1];
 
@@ -108,7 +116,8 @@ public class ComplexAI extends AI {
         System.out.println("done");
 
         Platform.runLater(() -> {
-            ready.set(true);
+            progressProperty().set(1);
+            readyProperty().set(true);
         });
     }
 
@@ -122,6 +131,8 @@ public class ComplexAI extends AI {
 
         StackNode parent = nodePool[depth];
         List<Point> list = parent.lwb.getLegalMoves();
+
+        startProgress(depth, list.size());
 
         depth++;
 
@@ -141,10 +152,12 @@ public class ComplexAI extends AI {
             }
 
             pickChild(depth, child, parent);
+            countProgress(depth - 1);
 
         } else {
 
             for (Point p : list) {
+
                 LightWeightBoard lwb = new LightWeightBoard(col, row, parent.lwb.getTurn(), parent.lwb.getBaord());
                 lwb.takeTurn(p.x, p.y);
 
@@ -156,6 +169,8 @@ public class ComplexAI extends AI {
                 recurisveMinMax(depth);
 
                 pickChild(depth, child, parent);
+
+                countProgress(depth - 1);
             }
         }
     }
@@ -195,6 +210,45 @@ public class ComplexAI extends AI {
         }
     }
 
+    private void startProgress(int depth, int size) {
+        if (depth == 0) {
+            maxMajorTick = size;
+            majorTickCount = 0;
+        } else if (depth == 1) {
+            if (size == 0) {
+                maxMinorTick = 1;
+            } else {
+                maxMinorTick = size;
+            }
+            minorTickCount = 0;
+        }
+    }
+
+    private void countProgress(int depth) {
+        if (depth == 0) {
+            majorTickCount++;
+        } else if (depth == 1) {
+            minorTickCount++;
+        }
+
+        updateProgress();
+    }
+
+    private void updateProgress() {
+
+        //prevents flooding the gui thread with update requests
+        now = System.currentTimeMillis();
+        if (now - then > 20) {
+            then = now;
+
+            double value = (majorTickCount + (minorTickCount / (double) maxMinorTick)) / (double) maxMajorTick;
+
+            Platform.runLater(() -> {
+                progressProperty().set(value);
+            });
+        }
+    }
+    
 //    private void nextMoveHelper() {
 //        turn = gm.turnProperty().get();
 //
@@ -439,7 +493,6 @@ public class ComplexAI extends AI {
 //            return "depth: " + depth + ", added: " + added + ", score: " + score + m + ", noMove: " + noMove + ", id: " + id;
 //        }
 //    }
-
     protected static class StackNode {
 
         final boolean noMove;

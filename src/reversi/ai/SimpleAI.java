@@ -59,7 +59,7 @@ public class SimpleAI extends AI {
 
     @Override
     public void requestNextMove() {
-        ready.set(false);
+        readyProperty().set(false);
 
         int x = -1;
         int y = -1;
@@ -77,7 +77,7 @@ public class SimpleAI extends AI {
 
         nextMove = new Point(x, y);
 
-        ready.set(true);
+        readyProperty().set(true);
     }
 
     @Override
@@ -102,7 +102,8 @@ public class SimpleAI extends AI {
 
         priorityList.sort((p1, p2) -> p2.priority - p1.priority);
 
-        ready.set(true);
+        readyProperty().set(true);
+        progressProperty().set(1);
     }
 
     private PriorityPoint determinePriority(int x, int y) {

@@ -5,9 +5,6 @@
  */
 package reversi.view;
 
-import java.awt.Point;
-import javafx.animation.PauseTransition;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -15,10 +12,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
-import javafx.stage.Stage;
-import javafx.util.Duration;
-import reversi.ai.AI;
-import reversi.ai.SimpleAI;
 import reversi.control.GameController;
 import reversi.model.GameModel;
 import reversi.model.Owner;
@@ -58,12 +51,15 @@ public class GameView extends StackPane {
 
         PlayerScore black = new PlayerScore(Owner.BLACK, gameController);
         PlayerScore white = new PlayerScore(Owner.WHITE, gameController);
+        StatusBar sb = new StatusBar(gameController);
 
         BorderPane.setMargin(black, new Insets(3));
         BorderPane.setMargin(white, new Insets(3));
+        BorderPane.setMargin(sb, new Insets(1, 3, 3, 3));
 
         borderPane.setLeft(black);
         borderPane.setRight(white);
+        borderPane.setBottom(sb);
         //borderPane.setTop(new GameMenu(this));
 
         getChildren().setAll(borderPane);

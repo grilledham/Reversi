@@ -9,8 +9,8 @@ import reversi.model.Settings;
 import java.awt.Point;
 import java.util.List;
 import javafx.animation.PauseTransition;
-import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import reversi.ai.AI;
@@ -35,12 +35,13 @@ public class GameController {
     private final Stage stage;
     private Settings settings;
     private SimpleBooleanProperty blockUserProperty;
-    private Player blackPlayer, whitePlayer, currentPlayer;
+    private SimpleObjectProperty<Player> blackPlayer, whitePlayer, currentPlayer;
 
     public GameController(Stage stage) {
         this.stage = stage;
         settings = new Settings();
         blockUserProperty = new SimpleBooleanProperty();
+        currentPlayer = new SimpleObjectProperty<>();
         gameMenu = new GameMenu(this);
 
         intiGame();
@@ -85,22 +86,27 @@ public class GameController {
 
     private void intiGame() {
         gameModel = new GameModel(settings.getColumns(), settings.getRows());
-        gameView = new GameView(this);
+        finished = new SimpleBooleanProperty(false);
+        go = new SimpleBooleanProperty(false);
+        
+        
+        
+        
 
         if (settings.getBlackPlayer().isHuman()) {
-            blackPlayer = new Player(Owner.BLACK, null);
+            blackPlayer = new SimpleObjectProperty<>(new Player(Owner.BLACK, null));
         } else {
-            blackPlayer = new Player(Owner.BLACK, settings.getBlackPlayer().pickAI(gameModel));
+            blackPlayer = new SimpleObjectProperty<>(new Player(Owner.BLACK, settings.getBlackPlayer().pickAI(gameModel)));
         }
 
         if (settings.getWhitePlayer().isHuman()) {
-            whitePlayer = new Player(Owner.WHITE, null);
+            whitePlayer = new SimpleObjectProperty<>(new Player(Owner.WHITE, null));
         } else {
-            whitePlayer = new Player(Owner.WHITE, settings.getWhitePlayer().pickAI(gameModel));
+            whitePlayer = new SimpleObjectProperty<>(new Player(Owner.WHITE, settings.getWhitePlayer().pickAI(gameModel)));
         }
 
-        finished = new SimpleBooleanProperty(false);
-        go = new SimpleBooleanProperty(false);
+        setCurrentPlayer();
+        gameView = new GameView(this);
 
         go.addListener((ob, ov, nv) -> {
             if (nv) {
@@ -109,7 +115,7 @@ public class GameController {
             }
         });
 
-        setCurrentPlayer();
+        //setCurrentPlayer();
         requestCurrentPlayerMove();
 
     }
@@ -122,9 +128,10 @@ public class GameController {
             return;
         }
 
-        if (currentPlayer.isHuman()) {
+        if (currentPlayer.get().isHuman()) {
             blockUserProperty.set(false);
         } else {
+            ai = currentPlayer.get().getAI();
             blockUserProperty.set(true);
             scheduleAIMove();
         }
@@ -132,7 +139,7 @@ public class GameController {
 
     private void scheduleAIMove() {
         finished.set(false);
-        ai = currentPlayer.getAI();
+
         go.bind(finished.and(ai.ReadyProperty()));
 
         PauseTransition pt = new PauseTransition(new Duration(settings.getMinAIDelay()));
@@ -146,7 +153,11 @@ public class GameController {
     }
 
     private void setCurrentPlayer() {
-        currentPlayer = (gameModel.turnProperty().get() == Owner.BLACK ? blackPlayer : whitePlayer);
+        if (gameModel.turnProperty().get() == Owner.BLACK) {
+            currentPlayer.set(blackPlayer.get());
+        } else {
+            currentPlayer.set(whitePlayer.get());
+        }
     }
 
     public GameMenu getGameMenu() {
@@ -176,5 +187,9 @@ public class GameController {
     public SimpleBooleanProperty blockUserProperty() {
         return blockUserProperty;
     }
+
+    public SimpleObjectProperty<Player> currentPlayerProperty() {
+        return currentPlayer;
+    }   
 
 }

@@ -7,7 +7,7 @@ package reversi.ai;
 
 import java.awt.Point;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import reversi.model.GameModel;
 
 /**
@@ -16,25 +16,36 @@ import reversi.model.GameModel;
  */
 public abstract class AI {
 
-    protected ReadOnlyBooleanWrapper ready;
+    private ReadOnlyBooleanWrapper ready;
+
+    private SimpleDoubleProperty progress;
 
     protected GameModel gm;
-    
+
     protected Point nextMove;
 
     protected AI(GameModel gm) {
         this.gm = gm;
         this.ready = new ReadOnlyBooleanWrapper(false);
+        this.progress = new SimpleDoubleProperty(0);
     }
 
     public abstract Point suggestMove();
-    
+
     public abstract void requestNextMove();
 
     public abstract Point getMove();
 
     public ReadOnlyBooleanWrapper ReadyProperty() {
+        return readyProperty();
+    }
+
+    public ReadOnlyBooleanWrapper readyProperty() {
         return ready;
+    }
+
+    public SimpleDoubleProperty progressProperty() {
+        return progress;
     }
 
 }
