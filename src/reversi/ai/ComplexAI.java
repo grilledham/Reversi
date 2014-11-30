@@ -100,20 +100,20 @@ public class ComplexAI extends AI {
 
         stackNodeCount++;
 
-        System.out.println("starting");
+        //System.out.println("starting");
 
         recurisveMinMax(0);
 
         nextMove = root.chosenMove;
-        System.out.println("next move: " + nextMove + ", score: " + root.score);
+        //System.out.println("next move: " + nextMove + ", score: " + root.score);
 
-        System.out.println("number of move(s) considered: " + stackNodeCount);
+        //System.out.println("number of move(s) considered: " + stackNodeCount);
 
         nodePool = null;
         root = null;
         System.gc();
 
-        System.out.println("done");
+        //System.out.println("done");
 
         Platform.runLater(() -> {
             progressProperty().set(1);
@@ -455,7 +455,11 @@ public class ComplexAI extends AI {
         }
 
         return new LightWeightBoard(col, row, gm.turnProperty().get(), board);
-
+    }
+    
+    @Override
+    public int getNumberOfMovesChecked(){
+        return stackNodeCount;
     }
 
 //    private static class Node {

@@ -51,14 +51,14 @@ public class HybridAI extends ComplexAI {
         int remainingTurns = gm.getRemainingTurns();
         int seenTurns = remainingTurns < MAX_DEPTH ? remainingTurns : MAX_DEPTH;
 
-        System.out.println("remaining: " + remainingTurns + ", seen: " + seenTurns);
+        //System.out.println("remaining: " + remainingTurns + ", seen: " + seenTurns);
 
         int ratio = (remainingTurns / seenTurns);
 
         edgeValue = Math.max((int) (ratio * edgeWieght), 1) - 1;
         cornerValue = Math.max((int) (ratio *cornerWieght), 1) - 1;
 
-        System.out.println("edge: " + edgeValue + ", corner: " + cornerValue);
+        //System.out.println("edge: " + edgeValue + ", corner: " + cornerValue);
 
     }
 

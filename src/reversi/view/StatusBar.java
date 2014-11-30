@@ -13,6 +13,7 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
+import reversi.ai.AI;
 import reversi.control.GameController;
 import reversi.control.Player;
 
@@ -25,6 +26,7 @@ public class StatusBar extends HBox {
     private GameController gc;
     private Label progress;
     private ChangeListener<Number> listner;
+    private AI ai;
     //private int id = 0;
 
     public StatusBar(GameController gc) {
@@ -42,7 +44,11 @@ public class StatusBar extends HBox {
                 progress.setText("AI done");
             } else {
                 int percentage = (int) (nv.doubleValue() * 100);
-                progress.setText("AI thinking: " + percentage + "%");
+                double moves =ai.getNumberOfMovesChecked();
+                moves/=1000000;
+                
+                String s = String.format("%.2f million", moves);
+                progress.setText("AI thinking: " + percentage + "%, Number of moves checked: "+s);
             }
         };
 
@@ -57,6 +63,7 @@ public class StatusBar extends HBox {
     private void setProgress(Player player) {
         if (player.isAI()) {
 
+            ai=player.getAI();
             player.getAI().progressProperty().removeListener(listner);
             player.getAI().progressProperty().addListener(listner);
 
