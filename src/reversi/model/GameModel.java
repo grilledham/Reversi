@@ -32,8 +32,7 @@ public class GameModel {
     private final SimpleBooleanProperty blackWin;
     private final SimpleBooleanProperty draw;
     private final SimpleBooleanProperty ready;
-    private final boolean noMove = false;
-
+    
     public GameModel(int columns, int rows) {
         ready = new SimpleBooleanProperty(false);
         this.columns = columns;
@@ -42,20 +41,15 @@ public class GameModel {
         turn = new SimpleObjectProperty<>(Owner.NONE);
 
         board = new SimpleObjectProperty[columns][rows];
-
-        for (int i = 0; i < columns; i++) {
-            for (int j = 0; j < rows; j++) {
-                board[i][j] = new SimpleObjectProperty<>(Owner.NONE);
-            }
-        }
-
         legalMoves = new SimpleBooleanProperty[columns][rows];
-        for (int i = 0; i < columns; i++) {
-            for (int j = 0; j < rows; j++) {
-                legalMoves[i][j] = new SimpleBooleanProperty(false);
-                //legalMoves[i][j].bind(new legalMoveBooleanBinding(i, j));
+
+        for (int x = 0; x < columns; x++) {
+            for (int y = 0; y < rows; y++) {
+                board[x][y] = new SimpleObjectProperty<>(Owner.NONE);
+                legalMoves[x][y] = new SimpleBooleanProperty(false);
             }
         }
+
         whiteScore = new SimpleIntegerProperty();
         blackScore = new SimpleIntegerProperty();
 
@@ -93,9 +87,9 @@ public class GameModel {
     }
 
     public void resetBoard() {
-        for (int i = 0; i < columns; i++) {
-            for (int j = 0; j < rows; j++) {
-                board[i][j].setValue(Owner.NONE);
+        for (int x = 0; x < columns; x++) {
+            for (int y = 0; y < rows; y++) {
+                board[x][y].setValue(Owner.NONE);
             }
         }
         initBoard();
@@ -359,76 +353,4 @@ public class GameModel {
     public SimpleBooleanProperty ReadyProperty() {
         return ready;
     }
-
-//    private class legalMoveBooleanBinding extends BooleanBinding {
-//
-//        int x, y;
-//
-//        public legalMoveBooleanBinding(int x, int y) {
-//            this.x = x;
-//            this.y = y;
-//            bind(turn);
-////            for (int xd = -1; xd < 2; xd++) {
-////                for (int yd = -1; yd < 2; yd++) {
-////                    if (xd == 0 && yd == 0) {
-////                        continue;
-////                    }
-////                    int xc = x;
-////                    int yc = y;
-////                    xc += xd;
-////                    yc += yd;
-////                    while (xc >= 0 && xc < columns && yc >= 0 && yc < rows) {
-////                        bind(board[xc][yc]);
-////                        xc += xd;
-////                        yc += yd;
-////                    }
-////                }
-////            }
-//        }
-//
-//        @Override
-//        protected boolean computeValue() {
-//            if (!(board[x][y].getValue().equals(Owner.NONE))) {
-//                return false;
-//            }
-//            for (int xd = -1; xd < 2; xd++) {
-//                for (int yd = -1; yd < 2; yd++) {
-//                    if (xd == 0 && yd == 0) {
-//                        continue;
-//                    }
-//                    if (canFlipInDir(x, y, xd, yd)) {
-//                        return true;
-//                    }
-//                }
-//            }
-//            return false;
-//
-//        }
-//
-//        private boolean canFlipInDir(int x, int y, int xd, int yd) {
-//            Owner t = turn.getValue();
-//            x += xd;
-//            y += yd;
-//
-//            if (x < 0 || x >= columns || y < 0 || y >= rows) {
-//                return false;
-//            }
-//
-//            if (board[x][y].getValue().opposite().equals(t)) {
-//                x += xd;
-//                y += yd;
-//                while (x >= 0 && x < columns && y >= 0 && y < rows) {
-//                    if (board[x][y].getValue().equals(t)) {
-//                        return true;
-//                    }
-//                    if (board[x][y].getValue().equals(Owner.NONE)) {
-//                        return false;
-//                    }
-//                    x += xd;
-//                    y += yd;
-//                }
-//            }
-//            return false;
-//        }
-//    }
 }

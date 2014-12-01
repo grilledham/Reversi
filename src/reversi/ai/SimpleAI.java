@@ -63,7 +63,7 @@ public class SimpleAI extends AI {
 
         int x = -1;
         int y = -1;
-        int delete = 0;
+        
         SimpleBooleanProperty[][] legalMoves = gm.legalMovesProperty();
 
         for (int i = 0; i < priorityList.size(); i++) {

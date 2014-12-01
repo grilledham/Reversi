@@ -20,8 +20,9 @@ public class Square extends StackPane {
 
     private final Piece p;
 
-    public Square(int x, int y, GameController gc) {
+    public Square(int x, int y, GameController gc, Board b) {
         GameModel gm = gc.getGameModel();
+        
         Color c = Color.GREEN;
         Color c2 = Color.hsb(c.getHue(), c.getSaturation(), c.getBrightness() - 0.05);
 
@@ -37,7 +38,7 @@ public class Square extends StackPane {
         getChildren().addAll(p, l);
 
         setOnMousePressed(e -> {
-            if(gc.blockUserProperty().get()){
+            if (gc.blockUserProperty().get()) {
                 return;
             }
             if (gm.legalMovesProperty()[x][y].getValue()) {
@@ -46,17 +47,19 @@ public class Square extends StackPane {
             }
         });
         setOnMouseEntered(e -> {
-            if(gc.blockUserProperty().get()){
+            b.setMouseSquare(x, y);
+            if (gc.blockUserProperty().get()) {
                 return;
             }
             if (gm.legalMovesProperty()[x][y].getValue()) {
-                Board b = (Board) getParent();
+                //Board b = (Board) getParent();
                 b.animationWouldFlipPieces(x, y);
             }
         });
         setOnMouseExited(e -> {
+            b.setMouseSquare(-1, -1);
             if (gm.legalMovesProperty()[x][y].getValue()) {
-                Board b = (Board) getParent();
+                //Board b = (Board) getParent();
                 b.unAnimationWouldFlipPieces();
             }
         });

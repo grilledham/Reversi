@@ -17,14 +17,14 @@ public class HybridAI extends ComplexAI {
     private int edgeValue;
     private int cornerValue;
     private static double edgeWieght = 0.5d;
-    private static double cornerWieght = 1d;
+    private static double cornerWieght = 1.25d;
 
     public HybridAI(GameModel gm) {
         super(gm);
     }
 
     @Override
-    protected void scoreChild(StackNode child, StackNode parent) {
+    protected void scoreChild(Node child, Node parent) {
         Owner[][] board = child.lwb.getBaord();
         child.score = child.lwb.calculateScore(turn);
 
@@ -40,10 +40,10 @@ public class HybridAI extends ComplexAI {
     }
 
     @Override
-    protected void stackHelper() {
+    protected void nextMoveHelper() {
 
         calculateWeights();
-        super.stackHelper();
+        super.nextMoveHelper();
     }
 
     private void calculateWeights() {
@@ -69,6 +69,7 @@ public class HybridAI extends ComplexAI {
         int r = row - 1;
 
         if (cornerValue != 0) {
+            
             if (board[0][0] == turn) {
                 us += cornerValue;
             } else {

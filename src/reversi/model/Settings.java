@@ -18,7 +18,7 @@ public class Settings {
     private PlayerType whitePlayer;
     private PlayerType blackPlayer;
     private int minAIDelay;
-    private int columns, rows;
+    private int columns, rows;    
 
     public Settings() {
         this.columns = DEFAULT_SIZE;

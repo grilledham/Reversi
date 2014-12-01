@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Border;
@@ -34,12 +35,28 @@ public class Board extends GridPane {
     private final Square[][] squares;
     private boolean flipAnimationInProgress = true;
     private int counter = 0;
+    private SimpleObjectProperty<Point> mouseSquareProperty;
 
     public Board(GameController gc) {
         this.gm = gc.getGameModel();
         animatedWouldFlipPieces = new ArrayList<>();
 
         squares = new Square[gm.getColumns()][gm.getRows()];
+
+        mouseSquareProperty = new SimpleObjectProperty<>(new Point(-1, -1));
+
+        gc.blockUserProperty().addListener((ob, ov, nv) -> {
+            int x = mouseSquareProperty.get().x;
+            int y = mouseSquareProperty.get().y;
+
+            if (x == -1 || y == -1) {
+                return;
+            }
+            if (!nv && gm.legalMovesProperty()[x][y].getValue()) {
+                animationWouldFlipPieces(x, y);
+            }
+
+        });
 
         setBorder(new Border(
                 new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, null, new BorderWidths(25)),
@@ -51,7 +68,7 @@ public class Board extends GridPane {
         setHgap(1);
         for (int x = 0; x < gm.getColumns(); x++) {
             for (int y = 0; y < gm.getRows(); y++) {
-                Square s = new Square(x, y, gc);
+                Square s = new Square(x, y, gc, this);
                 squares[x][y] = s;
                 //GridPane.setMargin(s, new Insets(1));
                 GridPane.setHgrow(s, Priority.ALWAYS);
@@ -99,9 +116,8 @@ public class Board extends GridPane {
     }
 
     public void animationFlipPieces(final List<Point> list) {
-
         unAnimationWouldFlipPieces();
-        //ArrayList<Point> list = gm.getLastChanges();
+
         int x = list.get(0).x;
         int y = list.get(0).y;
         list.sort((Point p1, Point p2) -> {
@@ -124,36 +140,11 @@ public class Board extends GridPane {
             i = j;
         }
 
-//        Timeline tm = new Timeline();
-//        tm.setCycleCount(Timeline.INDEFINITE);
-//        tm.getKeyFrames().add(new KeyFrame(new Duration(150), new EventHandler<ActionEvent>() {
-//            private int i = 1;
-//
-//            //private ArrayList<Point> list;
-//            {
-//                //list = new ArrayList<>(gm.getLastChanges());
-//
-//                list.sort((Point p1, Point p2) -> {
-//                    return compareDistanceFrom(p1, p2, x, y);
-//                });
-//            }
-//
-//            @Override
-//            public void handle(ActionEvent e) {
-//
-//                if (i < list.size()) {
-//                    do {
-//                        Point p = list.get(i);
-//                        squares[p.x][p.y].animateFlipPiece();
-//                        i++;
-//                    } while (i < list.size() && (compareDistanceFrom(list.get(i - 1), list.get(i), x, y) == 0));
-//
-//                } else {
-//                    tm.stop();
-//                }
-//            }
-//        }));
         squares[x][y].placePiece();
         tm.play();
+    }
+
+    public void setMouseSquare(int x, int y) {
+        mouseSquareProperty.set(new Point(x, y));
     }
 }

@@ -20,7 +20,7 @@ public class Main extends Application {
     public void start(Stage primaryStage) {
         GameController gc = new GameController(primaryStage);
 
-        Scene scene = new Scene(gc.getGameView(), 960, 500);
+        Scene scene = new Scene(gc.getGameView(), 960, 510);
         primaryStage.setTitle("Reversi");
         primaryStage.setScene(scene);
         primaryStage.show();
