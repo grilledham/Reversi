@@ -24,6 +24,8 @@ public abstract class AI {
 
     protected Point nextMove;
 
+    protected volatile boolean isStopped;
+
     protected AI(GameModel gm) {
         this.gm = gm;
         this.ready = new ReadOnlyBooleanWrapper(false);
@@ -35,7 +37,7 @@ public abstract class AI {
     public abstract void requestNextMove();
 
     public abstract Point getMove();
-    
+
     public abstract int getNumberOfMovesChecked();
 
     public ReadOnlyBooleanWrapper ReadyProperty() {
@@ -48,6 +50,14 @@ public abstract class AI {
 
     public SimpleDoubleProperty progressProperty() {
         return progress;
+    }
+
+    public boolean isStopped() {
+        return isStopped;
+    }
+
+    public void setIsStopped(boolean isStopped) {
+        this.isStopped = isStopped;
     }
 
 }

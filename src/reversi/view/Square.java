@@ -22,7 +22,7 @@ public class Square extends StackPane {
 
     public Square(int x, int y, GameController gc, Board b) {
         GameModel gm = gc.getGameModel();
-        
+
         Color c = Color.GREEN;
         Color c2 = Color.hsb(c.getHue(), c.getSaturation(), c.getBrightness() - 0.05);
 
@@ -52,14 +52,12 @@ public class Square extends StackPane {
                 return;
             }
             if (gm.legalMovesProperty()[x][y].getValue()) {
-                //Board b = (Board) getParent();
                 b.animationWouldFlipPieces(x, y);
             }
         });
         setOnMouseExited(e -> {
             b.setMouseSquare(-1, -1);
             if (gm.legalMovesProperty()[x][y].getValue()) {
-                //Board b = (Board) getParent();
                 b.unAnimationWouldFlipPieces();
             }
         });

@@ -29,7 +29,7 @@ public class GameController {
     private SimpleBooleanProperty go;
     private AI ai;
 
-    private final GameMenu gameMenu;
+    private GameMenu gameMenu;
     private GameModel gameModel;
     private GameView gameView;
     private final Stage stage;
@@ -42,10 +42,8 @@ public class GameController {
         settings = new Settings();
         blockUserProperty = new SimpleBooleanProperty();
         currentPlayer = new SimpleObjectProperty<>();
-        gameMenu = new GameMenu(this);
 
         intiGame();
-
     }
 
     public void takeTurn(int x, int y) {
@@ -63,11 +61,25 @@ public class GameController {
     }
 
     public void undoTurn() {
+        if (currentPlayer.get().isAI()) {
+            currentPlayer.get().getAI().setIsStopped(true);
+        }
 
+        gameModel.undoTurn();
+        gameView.updateBoard();
+        setCurrentPlayer();
+        requestCurrentPlayerMove();
     }
 
     public void redoTurn() {
+        if (currentPlayer.get().isAI()) {
+            currentPlayer.get().getAI().setIsStopped(true);
+        }
 
+        gameModel.redoTurn();
+        gameView.updateBoard();
+        setCurrentPlayer();
+        requestCurrentPlayerMove();
     }
 
     public void gotoTurn(int turn) {
@@ -86,12 +98,10 @@ public class GameController {
 
     private void intiGame() {
         gameModel = new GameModel(settings.getColumns(), settings.getRows());
+        gameMenu = new GameMenu(this);
+
         finished = new SimpleBooleanProperty(false);
         go = new SimpleBooleanProperty(false);
-        
-        
-        
-        
 
         if (settings.getBlackPlayer().isHuman()) {
             blackPlayer = new SimpleObjectProperty<>(new Player(Owner.BLACK, null));
@@ -109,7 +119,7 @@ public class GameController {
         gameView = new GameView(this);
 
         go.addListener((ob, ov, nv) -> {
-            if (nv) {
+            if (nv && !ai.isStopped()) {
                 Point p = ai.getMove();
                 takeTurn(p.x, p.y);
             }
@@ -190,6 +200,6 @@ public class GameController {
 
     public SimpleObjectProperty<Player> currentPlayerProperty() {
         return currentPlayer;
-    }   
+    }
 
 }

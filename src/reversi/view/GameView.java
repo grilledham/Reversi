@@ -65,30 +65,10 @@ public class GameView extends StackPane {
         getChildren().setAll(borderPane);
 
     }
-
-    public void reset() {
-        initGame();
+    public void updateBoard(){
+        board.updateBoard();
     }
-
-    private final void initBoard() {
-
-    }
-
-//    private void intiAI() {
-//        AI ai = new SimpleAI(gameModel);
-//        uiReady.addListener((ob, ov, nv) -> {
-//            if (nv && gameModel.turnProperty().get().equals(Owner.WHITE)) {
-//                PauseTransition pt = new PauseTransition(new Duration(500));
-//                pt.setOnFinished(e -> {
-//                    Point p = ai.move();
-////                    gameModel.takeTurn(p.x, p.y);
-////                    board.animationFlipPieces(p.x, p.y);
-//                    gameController.takeTurn(p.x, p.y);
-//                });
-//                pt.play();
-//            }
-//        });
-//    }
+ 
     public GameModel getGameModel() {
         return gameModel;
     }

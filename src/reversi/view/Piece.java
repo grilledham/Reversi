@@ -7,10 +7,6 @@ package reversi.view;
 
 import javafx.animation.*;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.geometry.Point3D;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
@@ -32,22 +28,24 @@ public class Piece extends Region {
     private final Timeline flipTl;
     private boolean replay = false;
     private final FadeTransition fadeTransition;
+    private final int x,y;
+    private final GameModel gm;
 
-    private GameModel gm;
-
-    private final SimpleObjectProperty<Owner> owner;
+    //private final SimpleObjectProperty<Owner> owner;
 
     public Piece(int x, int y, GameModel gm) {
         this.gm = gm;
-        owner = gm.boardProperty()[x][y];
+        this.x=x;
+        this.y=y;
+        //owner = gm.boardProperty()[x][y];
 
-        setBackgroundColor(owner.get());
+        setBackgroundColor(gm.boardProperty()[x][y].get());
 
         setRotationAxis(Rotate.X_AXIS);
 
         KeyFrame kf = new KeyFrame(new Duration(0), new KeyValue(rotateProperty(), 0));
         KeyFrame kf2 = new KeyFrame(new Duration(250), e -> {
-            setBackgroundColor(owner.get());
+            setBackgroundColor(gm.boardProperty()[x][y].get());
             replay=false;
         });
         KeyFrame kf3 = new KeyFrame(new Duration(500), new KeyValue(rotateProperty(), 180));
@@ -115,7 +113,7 @@ public class Piece extends Region {
     }
 
     public void placePiece() {
-        setBackgroundColor(owner.get());
+        setBackgroundColor(gm.boardProperty()[x][y].get());
     }
 
 }

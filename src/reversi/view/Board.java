@@ -36,9 +36,12 @@ public class Board extends GridPane {
     private boolean flipAnimationInProgress = true;
     private int counter = 0;
     private SimpleObjectProperty<Point> mouseSquareProperty;
+    private int columns, rows;
 
     public Board(GameController gc) {
         this.gm = gc.getGameModel();
+        columns = gm.getColumns();
+        rows = gm.getRows();
         animatedWouldFlipPieces = new ArrayList<>();
 
         squares = new Square[gm.getColumns()][gm.getRows()];
@@ -66,8 +69,8 @@ public class Board extends GridPane {
         setBackground(new Background(new BackgroundFill(Color.BLACK, null, null)));
         setVgap(1);
         setHgap(1);
-        for (int x = 0; x < gm.getColumns(); x++) {
-            for (int y = 0; y < gm.getRows(); y++) {
+        for (int x = 0; x < columns; x++) {
+            for (int y = 0; y < rows; y++) {
                 Square s = new Square(x, y, gc, this);
                 squares[x][y] = s;
                 //GridPane.setMargin(s, new Insets(1));
@@ -77,6 +80,14 @@ public class Board extends GridPane {
             }
         }
 
+    }
+
+    public void updateBoard() {
+        for (int x=0; x <columns;x++) {
+            for(int y=0;y<rows;y++){
+                squares[x][y].placePiece();
+            }            
+        }
     }
 
     public void animationWouldFlipPieces(int x, int y) {
