@@ -57,14 +57,14 @@ public class GameMenu extends MenuBar {
         undoTurn.setOnAction(e -> {            
             gameController.undoTurn();
         });
-        undoTurn.disableProperty().bind(gm.UndoProperty().not());
+        undoTurn.disableProperty().bind(gm.getBoardHistoryManager().UndoProperty().not());
 
         MenuItem redoTurn = new MenuItem("Redo Turn");
         redoTurn.setAccelerator(KeyCombination.keyCombination("Ctrl+X"));
         redoTurn.setOnAction(e -> {            
             gameController.redoTurn();
         });
-        redoTurn.disableProperty().bind(gm.RedoProperty().not());
+        redoTurn.disableProperty().bind(gm.getBoardHistoryManager().RedoProperty().not());
 
         MenuItem editMode = new MenuItem("Edit Mode");
         editMode.setAccelerator(KeyCombination.keyCombination("Ctrl+E"));

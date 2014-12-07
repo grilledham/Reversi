@@ -3,24 +3,26 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package reversi.ai;
+package reversi.model;
 
 import java.awt.Point;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import reversi.model.Owner;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  *
  * @author James
  */
-public class LightWeightBoard {
+public class BoardModel {
 
-    private int columns, rows;
-    private Owner[][] board;
-    private Owner turn;    
+    private final int columns, rows;
+    private final Owner[][] board;
+    private Owner turn;
 
-    public LightWeightBoard(int columns, int rows, Owner turn, Owner[][] board) {
+    public BoardModel(int columns, int rows, Owner turn) {
         this.columns = columns;
         this.rows = rows;
         this.turn = turn;
@@ -28,7 +30,21 @@ public class LightWeightBoard {
 
         for (int x = 0; x < columns; x++) {
             for (int y = 0; y < rows; y++) {
-                this.board[x][y] = board[x][y];
+                this.board[x][y] = Owner.NONE;
+            }
+        }
+    }
+
+    public BoardModel(BoardModel boardModel) {
+        this.columns = boardModel.columns;
+        this.rows = boardModel.rows;
+        this.turn = boardModel.turn;
+        this.board = new Owner[columns][rows];
+
+        for (int x = 0; x < columns; x++) {
+            for (int y = 0; y < rows; y++) {
+                this.board[x][y] = boardModel.getBoard()[x][y];
+
             }
         }
     }
@@ -47,16 +63,18 @@ public class LightWeightBoard {
         return list;
     }
 
-    public void takeTurn(int x, int y) {
+    public List<Point> takeTurn(int x, int y) {
         List<Point> list = flippedPieces(x, y);
 
         for (Point p : list) {
             board[p.x][p.y] = turn;
         }
         turn = turn.opposite();
+
+        return list;
     }
 
-    public int calculateScore(Owner owner) {
+    public int calculateScoreDifference(Owner owner) {
         int us = 0;
         int them = 0;
 
@@ -71,9 +89,6 @@ public class LightWeightBoard {
             }
         }
         return us - them;
-    }
-    public void flipTurn(){
-        turn = turn.opposite();
     }
 
     private boolean canFlip(int x, int y) {
@@ -119,7 +134,7 @@ public class LightWeightBoard {
         return false;
     }
 
-    private List<Point> flippedPieces(int x, int y) {
+    public List<Point> flippedPieces(int x, int y) {
         List<Point> list = new LinkedList<>();
         list.add(new Point(x, y));
 
@@ -163,14 +178,26 @@ public class LightWeightBoard {
         }
         list.clear();
         return list;
-    }   
+    }
 
-    public Owner[][] getBaord() {
+    public void placePiece(int x, int y, Owner owner) {
+        board[x][y] = owner;
+    }
+
+    public Owner getPiece(int x, int y) {
+        return board[x][y];
+    }
+
+    public void flipTurn() {
+        turn = turn.opposite();
+    }
+
+    public Owner[][] getBoard() {
         return this.board;
     }
 
     public Owner getTurn() {
         return turn;
     }
-    
+
 }

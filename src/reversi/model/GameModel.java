@@ -19,9 +19,10 @@ import javafx.beans.property.SimpleObjectProperty;
 public class GameModel {
 
     private final int columns, rows;
-    private ArrayList<Point> LastChanges;
+    private List<Point> LastChanges;
 
-    private SimpleObjectProperty<Owner>[][] board;
+    private BoardModel board;
+    private BoardHistoryManager boardHistoryManager;
     private final SimpleBooleanProperty[][] legalMoves;
     private final SimpleObjectProperty<Owner> turn;
     private final SimpleIntegerProperty whiteScore;
@@ -32,11 +33,6 @@ public class GameModel {
     private final SimpleBooleanProperty blackWin;
     private final SimpleBooleanProperty draw;
     private final SimpleBooleanProperty ready;
-    private final SimpleIntegerProperty turnNumberProperty;
-    private final SimpleBooleanProperty undoProperty;
-    private final SimpleBooleanProperty redoProperty;
-    private final List<SimpleObjectProperty<Owner>[][]> gameHistory;
-    private final SimpleIntegerProperty historySizeProperty;
 
     public GameModel(int columns, int rows) {
         ready = new SimpleBooleanProperty(false);
@@ -45,12 +41,11 @@ public class GameModel {
         LastChanges = new ArrayList<>();
         turn = new SimpleObjectProperty<>(Owner.NONE);
 
-        board = new SimpleObjectProperty[columns][rows];
+        board = new BoardModel(columns, rows, Owner.BLACK);
         legalMoves = new SimpleBooleanProperty[columns][rows];
 
         for (int x = 0; x < columns; x++) {
             for (int y = 0; y < rows; y++) {
-                board[x][y] = new SimpleObjectProperty<>(Owner.NONE);
                 legalMoves[x][y] = new SimpleBooleanProperty(false);
             }
         }
@@ -64,14 +59,7 @@ public class GameModel {
         blackWin = new SimpleBooleanProperty();
         draw = new SimpleBooleanProperty();
 
-        gameHistory = new ArrayList<>();
-
-        turnNumberProperty = new SimpleIntegerProperty();
-        historySizeProperty = new SimpleIntegerProperty(0);
-        redoProperty = new SimpleBooleanProperty();
-        redoProperty.bind(turnNumberProperty.lessThan(historySizeProperty));
-        undoProperty = new SimpleBooleanProperty();
-        undoProperty.bind(turnNumberProperty.greaterThan(0));
+        boardHistoryManager = new BoardHistoryManager(this);
 
         initBoard();
     }
@@ -81,10 +69,10 @@ public class GameModel {
         int c = columns / 2;
         int r = rows / 2;
 
-        board[c][r].setValue(Owner.BLACK);
-        board[c][r - 1].setValue(Owner.WHITE);
-        board[c - 1][r].setValue(Owner.WHITE);
-        board[c - 1][r - 1].setValue(Owner.BLACK);
+        board.placePiece(c, r, Owner.BLACK);
+        board.placePiece(c, r - 1, Owner.WHITE);
+        board.placePiece(c - 1, r, Owner.WHITE);
+        board.placePiece(c - 1, r - 1, Owner.BLACK);
 
         whiteScore.set(2);
         blackScore.set(2);
@@ -95,11 +83,8 @@ public class GameModel {
         blackWin.set(false);
         draw.set(false);
 
-        turnNumberProperty.set(0);
-        historySizeProperty.set(0);
-        gameHistory.clear();
-        recordTurn();
-
+        boardHistoryManager.reset();
+        boardHistoryManager.recordTurn();
         turn.set(Owner.BLACK);
         findLegalMoves();
         ready.set(true);
@@ -108,28 +93,22 @@ public class GameModel {
     public void resetBoard() {
         for (int x = 0; x < columns; x++) {
             for (int y = 0; y < rows; y++) {
-                board[x][y].setValue(Owner.NONE);
+                board.placePiece(x, y, Owner.NONE);
             }
         }
         initBoard();
     }
 
-    public ArrayList<Point> takeTurn(int x, int y) {
+    public List<Point> takeTurn(int x, int y) {
 
-        turnNumberProperty.set(turnNumberProperty.get() + 1);
+        List<Point> list = board.takeTurn(x, y);
 
-        ArrayList<Point> list = flippedPieces(x, y);
-
-        for (Point p : list) {
-            board[p.x][p.y].set(turn.get());
-        }
-
-        recordTurn();
+        boardHistoryManager.recordTurn();
 
         LastChanges = list;
         updateScores();
         flipSide();
-        //findLegalMoves();
+
         blackNoMoves.set(false);
         whiteNoMoves.set(false);
         testForEnd();
@@ -145,61 +124,20 @@ public class GameModel {
         return legalMoves[x][y].get();
     }
 
-    public ArrayList<Point> flippedPieces(int x, int y) {
-        ArrayList<Point> list = new ArrayList<>();
-        list.add(new Point(x, y));
-
-        for (int xd = -1; xd < 2; xd++) {
-            for (int yd = -1; yd < 2; yd++) {
-                if (xd == 0 && yd == 0) {
-                    continue;
-                }
-                list.addAll(flippedPiecesInDir(x, y, xd, yd));
-            }
-        }
-        return list;
-    }
-
     public void undoTurn() {
-        if (undoProperty.get()) {
-            turnNumberProperty.set(turnNumberProperty.get() - 1);
-            board = makeBoardCopy(gameHistory.get(turnNumberProperty.get()));
-            flipSide();
-        }
+        board = boardHistoryManager.undoTurn();
+        flipSide();
+        updateScores();
     }
 
     public void redoTurn() {
-        if (redoProperty.get()) {
-            turnNumberProperty.set(turnNumberProperty.get() + 1);
-            board = makeBoardCopy(gameHistory.get(turnNumberProperty.get()));
-            flipSide();
-        }
+        board = boardHistoryManager.redoTurn();
+        flipSide();
+        updateScores();
     }
 
-    private void recordTurn() {
-
-        SimpleObjectProperty<Owner>[][] copy = makeBoardCopy(board);
-
-        historySizeProperty.set(turnNumberProperty.get());
-
-        if (historySizeProperty.get() < gameHistory.size()) {
-            gameHistory.set(historySizeProperty.get(), copy);
-        } else {
-            gameHistory.add(copy);
-        }
-
-    }
-
-    private SimpleObjectProperty<Owner>[][] makeBoardCopy(SimpleObjectProperty<Owner>[][] toCopy) {        
-        SimpleObjectProperty<Owner>[][] copy = new SimpleObjectProperty[columns][rows];
-
-        for (int x = 0; x < columns; x++) {
-            for (int y = 0; y < rows; y++) {
-                copy[x][y] = new SimpleObjectProperty<>(toCopy[x][y].get());
-            }
-        }
-
-        return copy;
+    public void recordTurn() {
+        boardHistoryManager.recordTurn();
     }
 
     private void flipSide() {
@@ -208,14 +146,15 @@ public class GameModel {
     }
 
     private void testForEnd() {
-        if (!isLegalMoves()) {
+        if (!hasLegalMoves()) {
             setNoMove();
-            recordTurn();
-            turnNumberProperty.set(turnNumberProperty.get() + 1);
-            flipSide();
+            boardHistoryManager.recordTurn();
+            board.flipTurn();
+            flipSide();            
         }
-        if (!isLegalMoves()) {
+        if (!hasLegalMoves()) {
             setNoMove();
+            boardHistoryManager.recordTurn();
             endGame();
         }
     }
@@ -238,7 +177,7 @@ public class GameModel {
         }
     }
 
-    private boolean isLegalMoves() {
+    private boolean hasLegalMoves() {
         for (int x = 0; x < columns; x++) {
             for (int y = 0; y < rows; y++) {
                 if (legalMoves[x][y].getValue()) {
@@ -250,93 +189,17 @@ public class GameModel {
     }
 
     private void findLegalMoves() {
+        List<Point> list = board.getLegalMoves();
+
         for (int x = 0; x < columns; x++) {
             for (int y = 0; y < rows; y++) {
-                //legalMoves[x][y].set(false);
-                legalMoves[x][y].setValue(canFlip(x, y));
+                legalMoves[x][y].set(false);
+
             }
         }
-    }
-
-    private boolean canFlip(int x, int y) {
-        if (!(board[x][y].getValue().equals(Owner.NONE))) {
-            return false;
+        for (Point p : list) {
+            legalMoves[p.x][p.y].set(true);
         }
-        for (int xd = -1; xd < 2; xd++) {
-            for (int yd = -1; yd < 2; yd++) {
-                if (xd == 0 && yd == 0) {
-                    continue;
-                }
-                if (canFlipInDir(x, y, xd, yd)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private boolean canFlipInDir(int x, int y, int xd, int yd) {
-
-        Owner t = turn.getValue();
-        x += xd;
-        y += yd;
-
-        if (x < 0 || x >= columns || y < 0 || y >= rows) {
-            return false;
-        }
-
-        if (board[x][y].getValue().opposite().equals(t)) {
-            x += xd;
-            y += yd;
-            while (x >= 0 && x < columns && y >= 0 && y < rows) {
-                if (board[x][y].getValue().equals(t)) {
-                    return true;
-                }
-                if (board[x][y].getValue().equals(Owner.NONE)) {
-                    return false;
-                }
-                x += xd;
-                y += yd;
-            }
-        }
-        return false;
-    }
-
-    /**
-     *
-     * @param x
-     * @param y
-     * @return
-     */
-    private ArrayList<Point> flippedPiecesInDir(int x, int y, int xd, int yd) {
-        ArrayList<Point> list = new ArrayList<>();
-        Owner t = turn.getValue();
-        x += xd;
-        y += yd;
-
-        if (x < 0 || x >= columns || y < 0 || y >= rows) {
-            return list;
-        }
-
-        if (board[x][y].getValue().opposite().equals(t)) {
-            list.add(new Point(x, y));
-            x += xd;
-            y += yd;
-            while (x >= 0 && x < columns && y >= 0 && y < rows) {
-                if (board[x][y].getValue().equals(t)) {
-                    return list;
-                } else if (board[x][y].getValue().equals(Owner.NONE)) {
-                    list.clear();
-                    return list;
-                } else {
-                    list.add(new Point(x, y));
-                }
-                x += xd;
-                y += yd;
-            }
-        }
-        list.clear();
-        return list;
     }
 
     private void updateScores() {
@@ -344,9 +207,9 @@ public class GameModel {
 
         for (int x = 0; x < columns; x++) {
             for (int y = 0; y < rows; y++) {
-                if (board[x][y].get().equals(Owner.BLACK)) {
+                if (board.getPiece(x, y).equals(Owner.BLACK)) {
                     black++;
-                } else if (board[x][y].get().equals(Owner.WHITE)) {
+                } else if (board.getPiece(x, y).equals(Owner.WHITE)) {
                     white++;
                 }
             }
@@ -354,17 +217,6 @@ public class GameModel {
 
         blackScore.set(black);
         whiteScore.set(white);
-
-//        int count = LastChanges.size();
-//        int black = blackScore.get();
-//        int white = whiteScore.get();
-//        if (turn.get().equals(Owner.BLACK)) {
-//            blackScore.set(black + count);
-//            whiteScore.set(white - (count - 1));
-//        } else {
-//            blackScore.set(black - (count - 1));
-//            whiteScore.set(white + count);
-//        }
     }
 
     public int getRemainingTurns() {
@@ -386,7 +238,7 @@ public class GameModel {
         return blackScore;
     }
 
-    public ArrayList<Point> getLastChanges() {
+    public List<Point> getLastChanges() {
         return LastChanges;
     }
 
@@ -396,10 +248,6 @@ public class GameModel {
 
     public int getRows() {
         return rows;
-    }
-
-    public SimpleObjectProperty<Owner>[][] boardProperty() {
-        return board;
     }
 
     public SimpleBooleanProperty[][] legalMovesProperty() {
@@ -430,15 +278,12 @@ public class GameModel {
         return ready;
     }
 
-    public SimpleBooleanProperty UndoProperty() {
-        return undoProperty;
+    public BoardHistoryManager getBoardHistoryManager() {
+        return boardHistoryManager;
     }
 
-    public SimpleBooleanProperty RedoProperty() {
-        return redoProperty;
+    public BoardModel getBoard() {
+        return board;
     }
 
-    public SimpleIntegerProperty TurnNumberProperty() {
-        return turnNumberProperty;
-    }
 }

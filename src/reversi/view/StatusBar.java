@@ -44,11 +44,7 @@ public class StatusBar extends HBox {
                 progress.setText("AI done");
             } else {
                 int percentage = (int) (nv.doubleValue() * 100);
-                double moves =ai.getNumberOfMovesChecked();
-                moves/=1000000;
-                
-                String s = String.format("%.2f million", moves);
-                progress.setText("AI thinking: " + percentage + "%, Number of moves checked: "+s);
+                progress.setText("AI thinking: " + percentage + "%");
             }
         };
 
@@ -63,7 +59,7 @@ public class StatusBar extends HBox {
     private void setProgress(Player player) {
         if (player.isAI()) {
 
-            ai=player.getAI();
+            ai = player.getAI();
             player.getAI().progressProperty().removeListener(listner);
             player.getAI().progressProperty().addListener(listner);
 

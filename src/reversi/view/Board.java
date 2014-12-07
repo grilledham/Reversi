@@ -30,7 +30,7 @@ import reversi.model.GameModel;
  */
 public class Board extends GridPane {
 
-    private ArrayList<Point> animatedWouldFlipPieces;
+    private List<Point> animatedWouldFlipPieces;
     private final GameModel gm;
     private final Square[][] squares;
     private boolean flipAnimationInProgress = true;
@@ -91,7 +91,7 @@ public class Board extends GridPane {
     }
 
     public void animationWouldFlipPieces(int x, int y) {
-        animatedWouldFlipPieces = gm.flippedPieces(x, y);
+        animatedWouldFlipPieces = gm.getBoard().flippedPieces(x, y);
 
         boolean first = true;
         for (Point p : animatedWouldFlipPieces) {

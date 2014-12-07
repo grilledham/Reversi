@@ -121,7 +121,7 @@ public class GameController {
         go.addListener((ob, ov, nv) -> {
             if (nv && !ai.isStopped()) {
                 Point p = ai.getMove();
-                takeTurn(p.x, p.y);
+                takeTurn(p.x, p.y);             
             }
         });
 

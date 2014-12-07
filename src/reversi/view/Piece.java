@@ -39,13 +39,13 @@ public class Piece extends Region {
         this.y=y;
         //owner = gm.boardProperty()[x][y];
 
-        setBackgroundColor(gm.boardProperty()[x][y].get());
+        setBackgroundColor(gm.getBoard().getPiece(x, y));
 
         setRotationAxis(Rotate.X_AXIS);
 
         KeyFrame kf = new KeyFrame(new Duration(0), new KeyValue(rotateProperty(), 0));
         KeyFrame kf2 = new KeyFrame(new Duration(250), e -> {
-            setBackgroundColor(gm.boardProperty()[x][y].get());
+            setBackgroundColor(gm.getBoard().getPiece(x, y));
             replay=false;
         });
         KeyFrame kf3 = new KeyFrame(new Duration(500), new KeyValue(rotateProperty(), 180));
@@ -113,7 +113,8 @@ public class Piece extends Region {
     }
 
     public void placePiece() {
-        setBackgroundColor(gm.boardProperty()[x][y].get());
+        setBackgroundColor(gm.getBoard().getPiece(x, y));
+        setOpacity(1);
     }
 
 }

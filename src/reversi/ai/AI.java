@@ -36,9 +36,7 @@ public abstract class AI {
 
     public abstract void requestNextMove();
 
-    public abstract Point getMove();
-
-    public abstract int getNumberOfMovesChecked();
+    public abstract Point getMove();    
 
     public ReadOnlyBooleanWrapper ReadyProperty() {
         return readyProperty();

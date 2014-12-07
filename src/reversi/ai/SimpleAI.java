@@ -83,11 +83,7 @@ public class SimpleAI extends AI {
     @Override
     public Point suggestMove() {
         return getMove();
-    }
-    @Override
-    public int getNumberOfMovesChecked(){
-        return 0;
-    }
+    }    
 
     private void initPriority() {
         cols = gm.getColumns();

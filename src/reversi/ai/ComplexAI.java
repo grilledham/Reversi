@@ -6,11 +6,9 @@
 package reversi.ai;
 
 import java.awt.Point;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
 import javafx.application.Platform;
+import reversi.model.BoardModel;
 import reversi.model.GameModel;
 import reversi.model.Owner;
 
@@ -22,21 +20,19 @@ public class ComplexAI extends AI {
 
     protected static final int WIN_VALUE = 1000000;
     protected static final int LOSE_VALUE = -1000000;
-    protected static final int MAX_DEPTH = 7;
+    protected static final int MAX_DEPTH = 11;
 
     protected final int col;
     protected final int row;
     protected Owner turn;
 
     private Point nextMove;
-    private int nodeCount;
+    private Point suggestMove;
 
     private int maxMajorTick;
     private int majorTickCount;
     private int maxMinorTick;
     private int minorTickCount;
-    
-    
 
     private long then;
     private long now;
@@ -60,7 +56,16 @@ public class ComplexAI extends AI {
 
     @Override
     public Point suggestMove() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        if (suggestMove == null) {
+            List<Point> list = gm.getBoard().getLegalMoves();
+            if (list.isEmpty()) {
+                return null;
+            } else {
+                return list.get(0);
+            }
+        } else {
+            return suggestMove;
+        }
     }
 
     @Override
@@ -71,35 +76,34 @@ public class ComplexAI extends AI {
         Thread thread = new Thread(() -> nextMoveHelper());
         thread.setPriority(Thread.MIN_PRIORITY);
         thread.setDaemon(true);
-        
-        isStopped=false;
+
+        isStopped = false;
 
         thread.start();
     }
-    @Override
-    public int getNumberOfMovesChecked() {
-        return nodeCount;
-    }
 
     protected void nextMoveHelper() {
-        turn = gm.turnProperty().get();
+        long start = System.currentTimeMillis();
 
-        nodeCount = 0;
+        turn = gm.turnProperty().get();
 
         majorTickCount = 0;
         minorTickCount = 0;
 
-        Node root = new Node(null, makeFirstLWB(), null, false, initScore(0));
-
-        nodeCount++;
+        Node root = new Node(null, gm.getBoard(), null, false, initScore(0), Integer.MIN_VALUE, Integer.MAX_VALUE);
 
         recurisveMinMax(0, root);
-        
-        if(isStopped){
+
+        if (isStopped) {
             return;
         }
 
-        nextMove = root.chosenMove;
+        nextMove = root.chosenChild.move;
+        suggestMove = root.chosenChild.chosenChild.move;
+
+        long end = System.currentTimeMillis();
+
+        System.out.println("Time: " + (end - start));
 
         Platform.runLater(() -> {
             progressProperty().set(1);
@@ -108,8 +112,8 @@ public class ComplexAI extends AI {
     }
 
     private void recurisveMinMax(int depth, Node parent) {
-        
-        if(isStopped){
+
+        if (isStopped) {
             return;
         }
 
@@ -118,19 +122,18 @@ public class ComplexAI extends AI {
             return;
         }
 
-        List<Point> list = parent.lwb.getLegalMoves();
+        List<Point> list = parent.bm.getLegalMoves();
 
         startProgress(depth, list.size());
 
         depth++;
 
         if (list.isEmpty()) {
-            LightWeightBoard lwb = new LightWeightBoard(col, row, parent.lwb.getTurn(), parent.lwb.getBaord());
-            lwb.flipTurn();
 
-            Node child = new Node(parent, lwb, null, true, initScore(depth));
+            BoardModel bm = new BoardModel(parent.bm);
+            bm.flipTurn();
 
-            nodeCount++;
+            Node child = new Node(parent, bm, null, true, initScore(depth), parent.alpha, parent.beta);
 
             if (parent.noMove) {
                 scoreChild(child, parent);
@@ -146,25 +149,27 @@ public class ComplexAI extends AI {
 
             for (Point p : list) {
 
-                LightWeightBoard lwb = new LightWeightBoard(col, row, parent.lwb.getTurn(), parent.lwb.getBaord());
-                lwb.takeTurn(p.x, p.y);
+                BoardModel bm = new BoardModel(parent.bm);
+                bm.takeTurn(p.x, p.y);
 
-                Node child = new Node(parent, lwb, p, false, initScore(depth));
-
-                nodeCount++;
+                Node child = new Node(parent, bm, p, false, initScore(depth), parent.alpha, parent.beta);
 
                 recurisveMinMax(depth, child);
 
-                pickChild(depth, child, parent);
+                boolean shouldPrune = pickChild(depth, child, parent);
 
                 countProgress(depth - 1);
+
+                if (shouldPrune) {
+                    break;
+                }
             }
         }
     }
 
     protected void scoreChild(Node child, Node parent) {
 
-        child.score = child.lwb.calculateScore(turn);
+        child.score = child.bm.calculateScoreDifference(turn);
 
         if (child.noMove && parent.noMove) {
             if (child.score > 0) {
@@ -175,18 +180,22 @@ public class ComplexAI extends AI {
         }
     }
 
-    private void pickChild(int depth, Node child, Node parent) {
+    private boolean pickChild(int depth, Node child, Node parent) {
         if (depth % 2 == 0) {
             if (child.score < parent.score) {
                 parent.score = child.score;
-                parent.chosenMove = child.move;
+                parent.beta = child.score;
+                parent.chosenChild = child;
             }
         } else {
             if (child.score > parent.score) {
                 parent.score = child.score;
-                parent.chosenMove = child.move;
+                parent.alpha = child.score;
+                parent.chosenChild = child;
             }
         }
+
+        return parent.alpha >= parent.beta;
     }
 
     private int initScore(int depth) {
@@ -236,39 +245,23 @@ public class ComplexAI extends AI {
         }
     }
 
-    private LightWeightBoard makeFirstLWB() {
-
-        Owner[][] board = new Owner[col][row];
-
-        for (int x = 0; x < col; x++) {
-            for (int y = 0; y < row; y++) {
-                board[x][y] = gm.boardProperty()[x][y].get();
-            }
-        }
-
-        return new LightWeightBoard(col, row, gm.turnProperty().get(), board);
-    }
-
-    
-    
-
-    
-
     protected static class Node {
 
         final Node parent;
         final boolean noMove;
-        final LightWeightBoard lwb;
+        final BoardModel bm;
         final Point move;
-        Point chosenMove;
-        int score;
+        Node chosenChild;
+        int score, alpha, beta;
 
-        public Node(Node parent, LightWeightBoard lwb, Point move, boolean noMove, int score) {
+        public Node(Node parent, BoardModel bm, Point move, boolean noMove, int score, int alpha, int beta) {
             this.parent = parent;
-            this.lwb = lwb;
+            this.bm = bm;
             this.move = move;
             this.noMove = noMove;
             this.score = score;
+            this.alpha = alpha;
+            this.beta = beta;
         }
 
         @Override
@@ -281,15 +274,7 @@ public class ComplexAI extends AI {
                 m = ", move: (" + move.x + "," + move.y + ")";
             }
 
-            String cm;
-
-            if (chosenMove == null) {
-                cm = ", chosenMove: null";
-            } else {
-                cm = ", chosenMove: (" + chosenMove.x + "," + chosenMove.y + ")";
-            }
-
-            return "score: " + score + m + ", noMove: " + noMove + cm;
+            return "score: " + score + m + ", noMove: " + noMove;
         }
     }
 }
