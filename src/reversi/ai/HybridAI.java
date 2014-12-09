@@ -16,26 +16,32 @@ public class HybridAI extends ComplexAI {
 
     private int edgeValue;
     private int cornerValue;
-    private static double edgeWieght = 0.5d;
-    private static double cornerWieght = 4d;
+    private static double edgeWieght = 2d;
+    private static double cornerWieght = 16d;
 
     public HybridAI(GameModel gm) {
         super(gm);
     }
 
     @Override
-    protected void scoreChild(Node child, Node parent) {
+    protected void scoreChild(int depth, Node child, Node parent) {
         Owner[][] board = child.bm.getBoard();
-        child.score = child.bm.calculateScoreDifference(turn);
+        int score = child.bm.calculateScoreDifference(turn);
 
         if (child.noMove && parent.noMove) {
-            if (child.score > 0) {
-                child.score += WIN_VALUE;
-            } else if (child.score < 0) {
-                child.score += LOSE_VALUE;
+            if (score > 0) {
+                score += WIN_VALUE;
+            } else if (score < 0) {
+                score += LOSE_VALUE;
             }
         } else {
-            child.score += getWeightValue(board);
+            score += getWeightValue(board);
+        }
+
+        if (depth % 2 == 0) {
+            child.alpha = score;
+        } else {
+            child.beta = score;
         }
     }
 
@@ -52,10 +58,10 @@ public class HybridAI extends ComplexAI {
         int seenTurns = remainingTurns < MAX_DEPTH ? remainingTurns : MAX_DEPTH;
 
         //System.out.println("remaining: " + remainingTurns + ", seen: " + seenTurns);
-        int ratio = (remainingTurns / seenTurns);
+        double ratio = ((double) remainingTurns / seenTurns);
 
-        edgeValue = Math.max((int) (ratio * edgeWieght), 1) - 1;
-        cornerValue = Math.max((int) (ratio * cornerWieght), 1) - 1;
+        edgeValue = (int) ((ratio - 1) * edgeWieght);
+        cornerValue = (int) ((ratio - 1) * cornerWieght);
 
         //System.out.println("edge: " + edgeValue + ", corner: " + cornerValue);
     }

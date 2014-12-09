@@ -20,7 +20,7 @@ public class ComplexAI extends AI {
 
     protected static final int WIN_VALUE = 1000000;
     protected static final int LOSE_VALUE = -1000000;
-    protected static final int MAX_DEPTH = 11;
+    protected static final int MAX_DEPTH = 9;    
 
     protected final int col;
     protected final int row;
@@ -84,13 +84,14 @@ public class ComplexAI extends AI {
 
     protected void nextMoveHelper() {
         long start = System.currentTimeMillis();
+        //nodeCount = 0;
 
         turn = gm.turnProperty().get();
 
         majorTickCount = 0;
         minorTickCount = 0;
 
-        Node root = new Node(null, gm.getBoard(), null, false, initScore(0), Integer.MIN_VALUE, Integer.MAX_VALUE);
+        Node root = new Node(null, gm.getBoard(), null, false, Integer.MIN_VALUE, Integer.MAX_VALUE);
 
         recurisveMinMax(0, root);
 
@@ -118,7 +119,7 @@ public class ComplexAI extends AI {
         }
 
         if (depth == MAX_DEPTH) {
-            scoreChild(parent, parent.parent);
+            scoreChild(depth, parent, parent.parent);
             return;
         }
 
@@ -133,10 +134,10 @@ public class ComplexAI extends AI {
             BoardModel bm = new BoardModel(parent.bm);
             bm.flipTurn();
 
-            Node child = new Node(parent, bm, null, true, initScore(depth), parent.alpha, parent.beta);
+            Node child = new Node(parent, bm, null, true, parent.alpha, parent.beta);
 
             if (parent.noMove) {
-                scoreChild(child, parent);
+                scoreChild(depth, child, parent);
             } else {
                 recurisveMinMax(depth, child);
             }
@@ -152,57 +153,53 @@ public class ComplexAI extends AI {
                 BoardModel bm = new BoardModel(parent.bm);
                 bm.takeTurn(p.x, p.y);
 
-                Node child = new Node(parent, bm, p, false, initScore(depth), parent.alpha, parent.beta);
+                Node child = new Node(parent, bm, p, false, parent.alpha, parent.beta);
 
                 recurisveMinMax(depth, child);
 
-                boolean shouldPrune = pickChild(depth, child, parent);
+                pickChild(depth, child, parent);
 
                 countProgress(depth - 1);
 
-                if (shouldPrune) {
+                if (parent.alpha >= parent.beta) {                    
                     break;
                 }
+                
             }
         }
     }
 
-    protected void scoreChild(Node child, Node parent) {
+    protected void scoreChild(int depth, Node child, Node parent) {
 
-        child.score = child.bm.calculateScoreDifference(turn);
+        int score = child.bm.calculateScoreDifference(turn);
 
         if (child.noMove && parent.noMove) {
-            if (child.score > 0) {
-                child.score += WIN_VALUE;
+            if (score > 0) {
+                score += WIN_VALUE;
             } else {
-                child.score += LOSE_VALUE;
-            }
-        }
-    }
-
-    private boolean pickChild(int depth, Node child, Node parent) {
-        if (depth % 2 == 0) {
-            if (child.score < parent.score) {
-                parent.score = child.score;
-                parent.beta = child.score;
-                parent.chosenChild = child;
-            }
-        } else {
-            if (child.score > parent.score) {
-                parent.score = child.score;
-                parent.alpha = child.score;
-                parent.chosenChild = child;
+                score += LOSE_VALUE;
             }
         }
 
-        return parent.alpha >= parent.beta;
+        if (depth % 2 == 0) {
+            child.alpha = score;
+        } else {
+            child.beta = score;
+        }
     }
 
-    private int initScore(int depth) {
+    private void pickChild(int depth, Node child, Node parent) {
+
         if (depth % 2 == 0) {
-            return Integer.MIN_VALUE;
+            if (child.alpha < parent.beta) {
+                parent.beta = child.alpha;
+                parent.chosenChild = child;
+            }
         } else {
-            return Integer.MAX_VALUE;
+            if (child.beta > parent.alpha) {
+                parent.alpha = child.beta;
+                parent.chosenChild = child;
+            }
         }
     }
 
@@ -252,29 +249,15 @@ public class ComplexAI extends AI {
         final BoardModel bm;
         final Point move;
         Node chosenChild;
-        int score, alpha, beta;
+        int alpha, beta;
 
-        public Node(Node parent, BoardModel bm, Point move, boolean noMove, int score, int alpha, int beta) {
+        public Node(Node parent, BoardModel bm, Point move, boolean noMove, int alpha, int beta) {
             this.parent = parent;
             this.bm = bm;
             this.move = move;
             this.noMove = noMove;
-            this.score = score;
             this.alpha = alpha;
-            this.beta = beta;
-        }
-
-        @Override
-        public String toString() {
-            String m;
-
-            if (move == null) {
-                m = ", move: null";
-            } else {
-                m = ", move: (" + move.x + "," + move.y + ")";
-            }
-
-            return "score: " + score + m + ", noMove: " + noMove;
+            this.beta = beta;            
         }
     }
 }
