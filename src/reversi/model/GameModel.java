@@ -101,6 +101,10 @@ public class GameModel {
 
     public List<Point> takeTurn(int x, int y) {
 
+        if(!isLegalMove(x, y)){
+            System.out.println("illegal move!");
+        }
+        
         List<Point> list = board.takeTurn(x, y);
 
         boardHistoryManager.recordTurn();
@@ -150,7 +154,7 @@ public class GameModel {
             setNoMove();
             boardHistoryManager.recordTurn();
             board.flipTurn();
-            flipSide();            
+            flipSide();
         }
         if (!hasLegalMoves()) {
             setNoMove();

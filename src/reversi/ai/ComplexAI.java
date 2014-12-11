@@ -20,7 +20,7 @@ public class ComplexAI extends AI {
 
     protected static final int WIN_VALUE = 1000000;
     protected static final int LOSE_VALUE = -1000000;
-    protected static final int MAX_DEPTH = 9;    
+    protected static final int MAX_DEPTH = 9;
 
     protected final int col;
     protected final int row;
@@ -29,10 +29,8 @@ public class ComplexAI extends AI {
     private Point nextMove;
     private Point suggestMove;
 
-    private int maxMajorTick;
-    private int majorTickCount;
-    private int maxMinorTick;
-    private int minorTickCount;
+    private int[] maxProgressTick, progressTick;
+    private int progressDepth = 3;
 
     private long then;
     private long now;
@@ -84,14 +82,15 @@ public class ComplexAI extends AI {
 
     protected void nextMoveHelper() {
         long start = System.currentTimeMillis();
-        //nodeCount = 0;
 
         turn = gm.turnProperty().get();
 
-        majorTickCount = 0;
-        minorTickCount = 0;
+        maxProgressTick = new int[progressDepth];
+        progressTick = new int[progressDepth];
 
-        Node root = new Node(null, gm.getBoard(), null, false, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        BitBoard bb = new BitBoard(gm.getBoard());
+
+        Node root = new Node(null, bb, 0, false, Integer.MIN_VALUE, Integer.MAX_VALUE);
 
         recurisveMinMax(0, root);
 
@@ -99,8 +98,8 @@ public class ComplexAI extends AI {
             return;
         }
 
-        nextMove = root.chosenChild.move;
-        suggestMove = root.chosenChild.chosenChild.move;
+        nextMove = BitBoard.longToPoint(root.chosenChild.move);
+        suggestMove = BitBoard.longToPoint(root.chosenChild.chosenChild.move);
 
         long end = System.currentTimeMillis();
 
@@ -123,18 +122,19 @@ public class ComplexAI extends AI {
             return;
         }
 
-        List<Point> list = parent.bm.getLegalMoves();
+        //List<Point> list = parent.bb.getLegalMoves();
+        long list = parent.bb.getLegalMoves();
 
-        startProgress(depth, list.size());
+        startProgress(depth, Long.bitCount(list));
 
         depth++;
 
-        if (list.isEmpty()) {
+        if (list == 0) {
 
-            BoardModel bm = new BoardModel(parent.bm);
-            bm.flipTurn();
+            BitBoard bb = new BitBoard(parent.bb);
+            bb.flipTurn();
 
-            Node child = new Node(parent, bm, null, true, parent.alpha, parent.beta);
+            Node child = new Node(parent, bb, 0, true, parent.alpha, parent.beta);
 
             if (parent.noMove) {
                 scoreChild(depth, child, parent);
@@ -148,30 +148,47 @@ public class ComplexAI extends AI {
 
         } else {
 
-            for (Point p : list) {
+//            for (Point p : list) {
+//
+//                BoardModel bm = new BoardModel(parent.bb);
+//                bm.takeTurn(p.x, p.y);
+//
+//                Node child = new Node(parent, bm, p, false, parent.alpha, parent.beta);
+//
+//                recurisveMinMax(depth, child);
+//
+//                pickChild(depth, child, parent);
+//
+//                countProgress(depth - 1);
+//
+//                if (parent.alpha >= parent.beta) {
+//                    break;
+//                }
+//            }
+            for (long l = 1L << 63; l != 0; l = l >>> 1) {
+                if ((l & list) != 0) {
+                    BitBoard bb = new BitBoard(parent.bb);
+                    bb.takeTurn(l);
 
-                BoardModel bm = new BoardModel(parent.bm);
-                bm.takeTurn(p.x, p.y);
+                    Node child = new Node(parent, bb, l, false, parent.alpha, parent.beta);
 
-                Node child = new Node(parent, bm, p, false, parent.alpha, parent.beta);
+                    recurisveMinMax(depth, child);
 
-                recurisveMinMax(depth, child);
+                    pickChild(depth, child, parent);
 
-                pickChild(depth, child, parent);
+                    countProgress(depth - 1);
 
-                countProgress(depth - 1);
-
-                if (parent.alpha >= parent.beta) {                    
-                    break;
+                    if (parent.alpha >= parent.beta) {
+                        break;
+                    }
                 }
-                
             }
         }
     }
 
     protected void scoreChild(int depth, Node child, Node parent) {
 
-        int score = child.bm.calculateScoreDifference(turn);
+        int score = child.bb.calculateScoreDifference(turn);
 
         if (child.noMove && parent.noMove) {
             if (score > 0) {
@@ -204,40 +221,41 @@ public class ComplexAI extends AI {
     }
 
     private void startProgress(int depth, int size) {
-        if (depth == 0) {
-            maxMajorTick = size;
-            majorTickCount = 0;
-        } else if (depth == 1) {
+        if (depth < progressDepth) {
+
             if (size == 0) {
-                maxMinorTick = 1;
-            } else {
-                maxMinorTick = size;
+                size = 1;
             }
-            minorTickCount = 0;
+            maxProgressTick[depth] = size;
+            progressTick[depth] = 0;
         }
     }
 
     private void countProgress(int depth) {
-        if (depth == 0) {
-            majorTickCount++;
-        } else if (depth == 1) {
-            minorTickCount++;
-        }
+        if (depth < progressDepth) {
 
-        updateProgress();
+            progressTick[depth]++;
+
+            updateProgress();
+        }
     }
 
     private void updateProgress() {
 
         //prevents flooding the gui thread with update requests
         now = System.currentTimeMillis();
-        if (now - then > 20) {
+        if (now - then > 50) {
             then = now;
 
-            double value = (majorTickCount + (minorTickCount / (double) maxMinorTick)) / (double) maxMajorTick;
+            double value = 0;
+            for (int i = progressDepth - 1; i >= 0; i--) {
+                value += progressTick[i];
+                value /= maxProgressTick[i];
+            }
 
+            double v = value;
             Platform.runLater(() -> {
-                progressProperty().set(value);
+                progressProperty().set(v);
             });
         }
     }
@@ -246,18 +264,18 @@ public class ComplexAI extends AI {
 
         final Node parent;
         final boolean noMove;
-        final BoardModel bm;
-        final Point move;
+        final BitBoard bb;
+        final long move;
         Node chosenChild;
         int alpha, beta;
 
-        public Node(Node parent, BoardModel bm, Point move, boolean noMove, int alpha, int beta) {
+        public Node(Node parent, BitBoard bb, long move, boolean noMove, int alpha, int beta) {
             this.parent = parent;
-            this.bm = bm;
+            this.bb = bb;
             this.move = move;
             this.noMove = noMove;
             this.alpha = alpha;
-            this.beta = beta;            
+            this.beta = beta;
         }
     }
 }

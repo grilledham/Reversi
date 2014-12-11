@@ -43,7 +43,9 @@ public class StatusBar extends HBox {
             if (nv.doubleValue() == 1) {
                 progress.setText("AI done");
             } else {
-                int percentage = (int) (nv.doubleValue() * 100);
+                //int percentage = (int) (nv.doubleValue() * 100);
+                double per = nv.doubleValue()*100;
+                String percentage = String.format("%2.2f", per);
                 progress.setText("AI thinking: " + percentage + "%");
             }
         };

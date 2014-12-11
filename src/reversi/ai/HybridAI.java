@@ -19,14 +19,32 @@ public class HybridAI extends ComplexAI {
     private static double edgeWieght = 2d;
     private static double cornerWieght = 16d;
 
+    private static final long EDGE = BitBoard.stringToBoard("01111110"
+            + "10000001"
+            + "10000001"
+            + "10000001"
+            + "10000001"
+            + "10000001"
+            + "10000001"
+            + "01111110");
+
+    private static final long CORNER = BitBoard.stringToBoard("10000001"
+            + "00000000"
+            + "00000000"
+            + "00000000"
+            + "00000000"
+            + "00000000"
+            + "00000000"
+            + "10000001");
+
     public HybridAI(GameModel gm) {
         super(gm);
     }
 
     @Override
     protected void scoreChild(int depth, Node child, Node parent) {
-        Owner[][] board = child.bm.getBoard();
-        int score = child.bm.calculateScoreDifference(turn);
+        //Owner[][] board = child.bb.getBoard();
+        int score = child.bb.calculateScoreDifference(turn);
 
         if (child.noMove && parent.noMove) {
             if (score > 0) {
@@ -35,7 +53,7 @@ public class HybridAI extends ComplexAI {
                 score += LOSE_VALUE;
             }
         } else {
-            score += getWeightValue(board);
+            score += getWeightValue(child.bb);
         }
 
         if (depth % 2 == 0) {
@@ -64,6 +82,24 @@ public class HybridAI extends ComplexAI {
         cornerValue = (int) ((ratio - 1) * cornerWieght);
 
         //System.out.println("edge: " + edgeValue + ", corner: " + cornerValue);
+    }
+
+    private int getWeightValue(BitBoard board) {
+        int black = 0, white = 0;
+
+        if (cornerValue != 0) {
+            black += (Long.bitCount(board.getBlackPieces() & CORNER) * cornerValue);
+            white += (Long.bitCount(board.getWhitePieces() & CORNER) * cornerValue);
+        }
+        if (edgeValue != 0) {
+            black += (Long.bitCount(board.getBlackPieces() & EDGE) * edgeValue);
+            white += (Long.bitCount(board.getWhitePieces() & EDGE) * edgeValue);
+        }
+        if (turn.equals(Owner.BLACK)) {
+            return black - white;
+        } else {
+            return white - black;
+        }
     }
 
     private int getWeightValue(Owner[][] board) {
