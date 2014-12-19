@@ -5,6 +5,7 @@
  */
 package reversi.model;
 
+import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -17,7 +18,7 @@ import javafx.beans.property.SimpleIntegerProperty;
 public class BoardHistoryManager {
 
     private final SimpleIntegerProperty turnNumberProperty;
-    private final List<BoardModel> boardHistory;
+    private final List<GameState> boardHistory;
     private final SimpleIntegerProperty boardHistorySizeProperty;
     private final SimpleBooleanProperty undoProperty;
     private final SimpleBooleanProperty redoProperty;
@@ -45,31 +46,27 @@ public class BoardHistoryManager {
         boardHistory.clear();
     }
 
-    public BoardModel undoTurn() {
+    public GameState undoTurn() {
         turnNumberProperty.set(turnNumberProperty.get() - 1);
-        BoardModel bm = boardHistory.get(turnNumberProperty.get());
-        return new BoardModel(bm);
+        GameState gs = boardHistory.get(turnNumberProperty.get());
+        return new GameState(gs);
     }
 
-    public BoardModel redoTurn() {
+    public GameState redoTurn() {
         turnNumberProperty.set(turnNumberProperty.get() + 1);
-        BoardModel bm = boardHistory.get(turnNumberProperty.get());
-        return new BoardModel(bm);
+        GameState gs = boardHistory.get(turnNumberProperty.get());
+        return new GameState(gs);
     }
 
-    public void recordTurn() {
-
-        BoardModel copy = new BoardModel(gm.getBoard());
-
+    public void recordTurn(GameState gs) {
         turnNumberProperty.set(turnNumberProperty.get() + 1);
         boardHistorySizeProperty.set(turnNumberProperty.get());
 
         if (boardHistorySizeProperty.get() < boardHistory.size()) {
-            boardHistory.set(boardHistorySizeProperty.get(), copy);
+            boardHistory.set(boardHistorySizeProperty.get(), gs);
         } else {
-            boardHistory.add(copy);
+            boardHistory.add(gs);
         }
-
     }
 
     public SimpleBooleanProperty UndoProperty() {

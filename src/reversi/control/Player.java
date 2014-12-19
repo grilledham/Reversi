@@ -5,9 +5,13 @@
  */
 package reversi.control;
 
-import java.awt.Point;
 import reversi.ai.AI;
-import reversi.model.Owner;
+import reversi.ai.ComplexAI;
+import reversi.ai.HybridAI;
+import reversi.ai.SimpleAI;
+import reversi.model.BitBoard;
+import reversi.model.GameModel;
+import reversi.model.Settings;
 
 /**
  *
@@ -15,12 +19,52 @@ import reversi.model.Owner;
  */
 public class Player {
 
-    private final Owner side;
-    private AI ai;
+    private final AI ai;
+    private final int color;
 
-    public Player(Owner side, AI ai) {
-        this.side = side;
-        this.ai = ai;
+    public Player(int color, GameController gc) {
+        this.color = color;
+        GameModel gm = gc.getGameModel();
+        Settings s = gc.getSettings();
+        PlayerType pt = color == 1 ? s.getBlackPlayer() : s.getWhitePlayer();
+
+        switch (pt) {
+            case SIMPLE_AI: {
+                ai = new SimpleAI(gm, color);
+                break;
+            }
+            case COMPLEX_AI: {
+                ai = new ComplexAI(gm, color);
+                ComplexAI c = (ComplexAI) ai;
+                if (color == BitBoard.BLACK_COLOR) {
+                    c.setTargetDepth(s.getBlackTargetDepth());
+                } else {
+                    c.setTargetDepth(s.getWhiteTargetDepth());
+                }
+                break;
+            }
+            case HYBRID_AI: {
+                ai = new HybridAI(gm, color);
+                HybridAI h = (HybridAI) ai;
+                if (color == BitBoard.BLACK_COLOR) {
+                    h.setTargetDepth(s.getBlackTargetDepth());
+                    h.setCornerWieght(s.getBlackCornerWeight());
+                    h.setEdgeWeight(s.getBlackEdgeWeight());
+                    h.setInnerEdgeWeight(s.getBlackInnerEdgeWeight());
+                    h.setMiddleWeight(s.getBlackMiddleWeight());
+                } else {
+                    h.setTargetDepth(s.getWhiteTargetDepth());
+                    h.setCornerWieght(s.getWhiteCornerWeight());
+                    h.setEdgeWeight(s.getWhiteEdgeWeight());
+                    h.setInnerEdgeWeight(s.getWhiteInnerEdgeWeight());
+                    h.setMiddleWeight(s.getWhiteMiddleWeight());
+                }
+                break;
+            }
+            default: {
+                ai = null;
+            }
+        }
     }
 
     public AI getAI() {
@@ -35,7 +79,8 @@ public class Player {
         return ai != null;
     }
 
-    public Owner getSide() {
-        return side;
+    public int getColor() {
+        return color;
     }
+
 }

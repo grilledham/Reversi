@@ -22,14 +22,17 @@ public abstract class AI {
 
     protected GameModel gm;
 
-    protected Point nextMove;
+    protected Point nextMove, suggestMove;
+    
+    protected int playerColor;
 
     protected volatile boolean isStopped;
 
-    protected AI(GameModel gm) {
+    protected AI(GameModel gm, int color) {
         this.gm = gm;
         this.ready = new ReadOnlyBooleanWrapper(false);
         this.progress = new SimpleDoubleProperty(0);
+        this.playerColor=color;
     }
 
     public abstract Point suggestMove();

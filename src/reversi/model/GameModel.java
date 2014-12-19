@@ -21,7 +21,7 @@ public class GameModel {
     private final int columns, rows;
     private List<Point> LastChanges;
 
-    private BoardModel board;
+    private BitBoard board;
     private BoardHistoryManager boardHistoryManager;
     private final SimpleBooleanProperty[][] legalMoves;
     private final SimpleObjectProperty<Owner> turn;
@@ -41,7 +41,9 @@ public class GameModel {
         LastChanges = new ArrayList<>();
         turn = new SimpleObjectProperty<>(Owner.NONE);
 
-        board = new BoardModel(columns, rows, Owner.BLACK);
+        //board = new BoardModel(columns, rows, Owner.BLACK);
+        board = new BitBoard();
+
         legalMoves = new SimpleBooleanProperty[columns][rows];
 
         for (int x = 0; x < columns; x++) {
@@ -65,15 +67,6 @@ public class GameModel {
     }
 
     private void initBoard() {
-
-        int c = columns / 2;
-        int r = rows / 2;
-
-        board.placePiece(c, r, Owner.BLACK);
-        board.placePiece(c, r - 1, Owner.WHITE);
-        board.placePiece(c - 1, r, Owner.WHITE);
-        board.placePiece(c - 1, r - 1, Owner.BLACK);
-
         whiteScore.set(2);
         blackScore.set(2);
 
@@ -82,40 +75,34 @@ public class GameModel {
         whiteWin.set(false);
         blackWin.set(false);
         draw.set(false);
+        turn.set(Owner.BLACK);
 
         boardHistoryManager.reset();
-        boardHistoryManager.recordTurn();
-        turn.set(Owner.BLACK);
+        recordTurn(new Point(-1, -1), false);
+
         findLegalMoves();
         ready.set(true);
     }
 
     public void resetBoard() {
-        for (int x = 0; x < columns; x++) {
-            for (int y = 0; y < rows; y++) {
-                board.placePiece(x, y, Owner.NONE);
-            }
-        }
+        board.resetBoard();
         initBoard();
     }
 
     public List<Point> takeTurn(int x, int y) {
 
-        if(!isLegalMove(x, y)){
+        if (!isLegalMove(x, y)) {
             System.out.println("illegal move!");
         }
-        
-        List<Point> list = board.takeTurn(x, y);
 
-        boardHistoryManager.recordTurn();
-
+        List<Point> list = board.flippedPieces(x, y, turn.get());
         LastChanges = list;
-        updateScores();
-        flipSide();
 
-        blackNoMoves.set(false);
-        whiteNoMoves.set(false);
-        testForEnd();
+        board.takeTurn(x, y, turn.get());
+        flipSide();
+        updateScores();
+
+        testForEnd(x, y);
 
         return list;
     }
@@ -129,19 +116,37 @@ public class GameModel {
     }
 
     public void undoTurn() {
-        board = boardHistoryManager.undoTurn();
-        flipSide();
-        updateScores();
+        updateGameState(boardHistoryManager.undoTurn());
     }
 
     public void redoTurn() {
-        board = boardHistoryManager.redoTurn();
-        flipSide();
-        updateScores();
+        updateGameState(boardHistoryManager.redoTurn());
     }
 
-    public void recordTurn() {
-        boardHistoryManager.recordTurn();
+    public void recordTurn(Point move, boolean isEnd) {
+        boardHistoryManager.recordTurn(new GameState(board, move, turn.get(), isEnd));
+    }
+
+    private void updateGameState(GameState gs) {
+        board = gs.getBoard();
+        turn.set(gs.getOwner());
+        updateScores();
+        whiteNoMoves.set(false);
+        blackNoMoves.set(false);        
+
+        if (gs.isEnd()) {
+            endGame();
+            return;
+        }
+        blackWin.set(false);
+        whiteWin.set(false);
+        draw.set(false);
+
+        findLegalMoves();
+
+        if (!hasLegalMoves()) {
+            setNoMove();
+        }
     }
 
     private void flipSide() {
@@ -149,18 +154,29 @@ public class GameModel {
         findLegalMoves();
     }
 
-    private void testForEnd() {
+    private void testForEnd(int x, int y) {
+        blackNoMoves.set(false);
+        whiteNoMoves.set(false);
+
         if (!hasLegalMoves()) {
-            setNoMove();
-            boardHistoryManager.recordTurn();
-            board.flipTurn();
             flipSide();
+
+            if (!hasLegalMoves()) {
+                recordTurn(null, true);
+                endGame();
+
+            } else {
+                flipSide();
+                recordTurn(new Point(x, y), false);
+                setNoMove();
+                flipSide();
+                recordTurn(null, false);
+            }
+
+        } else {
+            recordTurn(new Point(x, y), false);
         }
-        if (!hasLegalMoves()) {
-            setNoMove();
-            boardHistoryManager.recordTurn();
-            endGame();
-        }
+
     }
 
     private void setNoMove() {
@@ -172,6 +188,10 @@ public class GameModel {
     }
 
     private void endGame() {
+        blackNoMoves.set(false);
+        whiteNoMoves.set(false);
+        turn.set(Owner.NONE);
+
         if (blackScore.get() > whiteScore.get()) {
             blackWin.set(true);
         } else if (blackScore.get() < whiteScore.get()) {
@@ -193,7 +213,7 @@ public class GameModel {
     }
 
     private void findLegalMoves() {
-        List<Point> list = board.getLegalMoves();
+        List<Point> list = BitBoard.splitToPoints(board.getLegalMoves(turn.get()));
 
         for (int x = 0; x < columns; x++) {
             for (int y = 0; y < rows; y++) {
@@ -201,26 +221,15 @@ public class GameModel {
 
             }
         }
+
         for (Point p : list) {
             legalMoves[p.x][p.y].set(true);
         }
     }
 
-    private void updateScores() {
-        int black = 0, white = 0;
-
-        for (int x = 0; x < columns; x++) {
-            for (int y = 0; y < rows; y++) {
-                if (board.getPiece(x, y).equals(Owner.BLACK)) {
-                    black++;
-                } else if (board.getPiece(x, y).equals(Owner.WHITE)) {
-                    white++;
-                }
-            }
-        }
-
-        blackScore.set(black);
-        whiteScore.set(white);
+    public void updateScores() {
+        blackScore.set(Long.bitCount(board.getBlackPieces()));
+        whiteScore.set(Long.bitCount(board.getWhitePieces()));
     }
 
     public int getRemainingTurns() {
@@ -228,6 +237,16 @@ public class GameModel {
         int sumOfScores = whiteScore.get() + blackScore.get();
 
         return numberOfSquare - sumOfScores;
+    }
+
+    public void applyEditChanges() {
+        boardHistoryManager.reset();
+        updateScores();        
+        blackWin.set(false);
+        whiteWin.set(false);
+        draw.set(false);
+        findLegalMoves();
+        testForEnd(-1, -1);
     }
 
     public SimpleObjectProperty<Owner> turnProperty() {
@@ -286,7 +305,7 @@ public class GameModel {
         return boardHistoryManager;
     }
 
-    public BoardModel getBoard() {
+    public BitBoard getBoard() {
         return board;
     }
 

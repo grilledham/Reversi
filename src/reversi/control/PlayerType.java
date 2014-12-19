@@ -24,18 +24,7 @@ public enum PlayerType {
 
     public boolean isHuman() {
         return this.equals(HUMAN);
-    }
-
-    public AI pickAI(GameModel gm) {
-        if (this.equals(SIMPLE_AI)) {
-            return new SimpleAI(gm);
-        } else if (this.equals(COMPLEX_AI)) {
-            return new ComplexAI(gm);
-        } else if (this.equals(HYBRID_AI)) {
-            return new HybridAI(gm);
-        }
-        return null;
-    }
+    }   
 
     @Override
     public String toString() {

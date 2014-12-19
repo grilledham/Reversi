@@ -7,14 +7,9 @@ package reversi.ai;
 
 import java.awt.Point;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import javafx.animation.PauseTransition;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.util.Duration;
 import reversi.model.GameModel;
-import reversi.model.Owner;
 
 /**
  * Assigns a priority to every square on the board. When
@@ -47,8 +42,8 @@ public class SimpleAI extends AI {
     private int numberOfXRings;
     private int numberOfYRings;
 
-    public SimpleAI(GameModel gm) {
-        super(gm);
+    public SimpleAI(GameModel gm, int color) {
+        super(gm, color);
         initPriority();        
     }
 
@@ -60,6 +55,7 @@ public class SimpleAI extends AI {
     @Override
     public void requestNextMove() {
         readyProperty().set(false);
+        isStopped=false;
 
         int x = -1;
         int y = -1;
@@ -77,6 +73,10 @@ public class SimpleAI extends AI {
 
         nextMove = new Point(x, y);
 
+        if(isStopped){            
+            return;
+        }
+        
         readyProperty().set(true);
     }
 

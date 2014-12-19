@@ -5,10 +5,10 @@
  */
 package reversi.ai;
 
+import reversi.model.BitBoard;
 import java.awt.Point;
 import java.util.List;
 import javafx.application.Platform;
-import reversi.model.BoardModel;
 import reversi.model.GameModel;
 import reversi.model.Owner;
 
@@ -20,23 +20,26 @@ public class ComplexAI extends AI {
 
     protected static final int WIN_VALUE = 1000000;
     protected static final int LOSE_VALUE = -1000000;
-    protected static final int MAX_DEPTH = 9;
 
     protected final int col;
     protected final int row;
-    protected Owner turn;
 
-    private Point nextMove;
-    private Point suggestMove;
+    private int targetDepth = 11;
+    private int lastDepthThreshold = 4;
+    private int goToDepth;
 
+    private long[] searchOrder;
+
+    private static final int DEFUALT_PROGRESS_DEPTH = 8;
     private int[] maxProgressTick, progressTick;
-    private int progressDepth = 3;
+    private int progressDepth = DEFUALT_PROGRESS_DEPTH;
+    private int lastDepth = 0;
 
     private long then;
     private long now;
 
-    public ComplexAI(GameModel gm) {
-        super(gm);
+    public ComplexAI(GameModel gm, int color) {
+        super(gm, color);
 
         col = gm.getColumns();
         row = gm.getRows();
@@ -55,7 +58,7 @@ public class ComplexAI extends AI {
     @Override
     public Point suggestMove() {
         if (suggestMove == null) {
-            List<Point> list = gm.getBoard().getLegalMoves();
+            List<Point> list = BitBoard.splitToPoints(gm.getBoard().getLegalMove(playerColor));
             if (list.isEmpty()) {
                 return null;
             } else {
@@ -68,6 +71,7 @@ public class ComplexAI extends AI {
 
     @Override
     public void requestNextMove() {
+
         readyProperty().set(false);
         progressProperty().set(0);
 
@@ -78,25 +82,42 @@ public class ComplexAI extends AI {
         isStopped = false;
 
         thread.start();
+
     }
 
     protected void nextMoveHelper() {
         long start = System.currentTimeMillis();
 
-        turn = gm.turnProperty().get();
+        if (gm.getRemainingTurns() - targetDepth <= lastDepthThreshold) {
+            goToDepth = targetDepth + lastDepthThreshold + 1;
+        } else {
+            goToDepth = targetDepth;
+        }
+        System.out.println("gotoDepth: " + goToDepth);
 
-        maxProgressTick = new int[progressDepth];
-        progressTick = new int[progressDepth];
+        maxProgressTick = new int[goToDepth - progressDepth + 1];
+        progressTick = new int[goToDepth - progressDepth + 1];
 
         BitBoard bb = new BitBoard(gm.getBoard());
 
-        Node root = new Node(null, bb, 0, false, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        Node root = new Node(null, bb, 0);
 
-        recurisveMinMax(0, root);
+        searchOrder = getSearchOrder(bb);
+
+        int score = 0;
+
+        try {
+            score = negaMax(root, goToDepth, -Integer.MAX_VALUE, Integer.MAX_VALUE, playerColor);
+            //score = negaScout(root, goToDepth, -Integer.MAX_VALUE, Integer.MAX_VALUE, playerColor);
+        } catch (InterruptedException e) {
+        }
 
         if (isStopped) {
             return;
         }
+
+        System.out.println("Player: " + playerColor);
+        System.out.println("score: " + score);
 
         nextMove = BitBoard.longToPoint(root.chosenChild.move);
         suggestMove = BitBoard.longToPoint(root.chosenChild.chosenChild.move);
@@ -111,130 +132,170 @@ public class ComplexAI extends AI {
         });
     }
 
-    private void recurisveMinMax(int depth, Node parent) {
+    protected long[] getSearchOrder(BitBoard bb) {
+        return BitBoard.splitToArray(bb.getEmptySquares());
+    }
 
+    private int negaMax(Node parent, int depth, int alpha, int beta, int color) throws InterruptedException {
         if (isStopped) {
-            return;
+            throw new InterruptedException();
         }
 
-        if (depth == MAX_DEPTH) {
-            scoreChild(depth, parent, parent.parent);
-            return;
+        if (depth == 0) {
+            return color * scoreChild(parent);
         }
 
-        //List<Point> list = parent.bb.getLegalMoves();
-        long list = parent.bb.getLegalMoves();
+        long list = parent.bb.getLegalMove(color);
 
-        startProgress(depth, Long.bitCount(list));
-
-        depth++;
+        doProgress(depth, list);
 
         if (list == 0) {
 
-            BitBoard bb = new BitBoard(parent.bb);
-            bb.flipTurn();
-
-            Node child = new Node(parent, bb, 0, true, parent.alpha, parent.beta);
-
-            if (parent.noMove) {
-                scoreChild(depth, child, parent);
+            if (parent.move == 0) {
+                return color * scoreChild(new Node(parent, parent.bb, 0));
             } else {
-                recurisveMinMax(depth, child);
+
+                BitBoard bb = new BitBoard(parent.bb);
+                Node child = new Node(parent, bb, 0);
+
+                int score = -negaMax(child, depth, -beta, -alpha, -color);
+                if (alpha < score) {
+                    parent.chosenChild = child;
+                    alpha = score;
+                }
+                return alpha;
             }
-
-            pickChild(depth, child, parent);
-
-            countProgress(depth - 1);
 
         } else {
 
-//            for (Point p : list) {
-//
-//                BoardModel bm = new BoardModel(parent.bb);
-//                bm.takeTurn(p.x, p.y);
-//
-//                Node child = new Node(parent, bm, p, false, parent.alpha, parent.beta);
-//
-//                recurisveMinMax(depth, child);
-//
-//                pickChild(depth, child, parent);
-//
-//                countProgress(depth - 1);
-//
-//                if (parent.alpha >= parent.beta) {
-//                    break;
-//                }
-//            }
-            for (long l = 1L << 63; l != 0; l = l >>> 1) {
+            for (long l : searchOrder) {
                 if ((l & list) != 0) {
                     BitBoard bb = new BitBoard(parent.bb);
-                    bb.takeTurn(l);
+                    bb.takeTurn(l, color);
+                    Node child = new Node(parent, bb, l);
 
-                    Node child = new Node(parent, bb, l, false, parent.alpha, parent.beta);
+                    int score;
+//                    if ((l & BitBoard.CORNERS) != 0 && depth < 3) {
+//                        score = -negaMax(child, depth + 1, -beta, -alpha, -color);
+//                    } else {
+//                        score = -negaMax(child, depth - 1, -beta, -alpha, -color);
+//                    }
 
-                    recurisveMinMax(depth, child);
+                    score = -negaMax(child, depth - 1, -beta, -alpha, -color);
 
-                    pickChild(depth, child, parent);
-
-                    countProgress(depth - 1);
-
-                    if (parent.alpha >= parent.beta) {
-                        break;
+                    if (alpha < score) {
+                        parent.chosenChild = child;
+                        alpha = score;
                     }
+
+                }
+                if (beta <= alpha) {
+                    break;
                 }
             }
+            return alpha;
         }
     }
 
-    protected void scoreChild(int depth, Node child, Node parent) {
+    private int negaScout(Node parent, int depth, int alpha, int beta, int color) throws InterruptedException {
+        if (isStopped) {
+            throw new InterruptedException();
+        }
 
-        int score = child.bb.calculateScoreDifference(turn);
+        if (depth == 0) {
+            return color * scoreChild(parent);
+        }
 
-        if (child.noMove && parent.noMove) {
+        long list = parent.bb.getLegalMove(color);
+
+        doProgress(depth, Long.bitCount(list));
+        if (list == 0) {
+
+            if (parent.move == 0) {
+                return color * scoreChild(new Node(parent, parent.bb, 0));
+            } else {
+
+                BitBoard bb = new BitBoard(parent.bb);
+                Node child = new Node(parent, bb, 0);
+
+                int score = -negaScout(child, depth - 1, -beta, -alpha, -color);
+                if (alpha < score) {
+                    parent.chosenChild = child;
+                    alpha = score;
+                }
+                return alpha;
+            }
+
+        } else {
+
+            for (long l : searchOrder) {
+                if ((l & list) != 0) {
+                    BitBoard bb = new BitBoard(parent.bb);
+                    bb.takeTurn(l, color);
+                    Node child = new Node(parent, bb, l);
+
+                    int score = 0;
+                    boolean first = true;
+
+                    if (first) {
+                        first = false;
+                        score = -negaScout(child, depth - 1, -beta, -alpha, -color);
+                    } else {
+                        score = -negaScout(child, depth - 1, -alpha - 1, -alpha, -color);
+                        if (alpha < score && score < beta) {
+                            score = -negaScout(child, depth - 1, -beta, -score, -color);
+                        }
+                    }
+
+                    if (alpha < score) {
+                        parent.chosenChild = child;
+                        alpha = score;
+                    }
+                }
+                if (beta <= alpha) {
+                    break;
+                }
+            }
+            return alpha;
+        }
+    }
+
+    protected int scoreChild(Node child) {
+
+        int score = child.bb.calculateScoredifferenceForBlack();
+
+        if (child.move == 0 && child.parent.move == 0) {
             if (score > 0) {
                 score += WIN_VALUE;
-            } else {
+            } else if (score < 0) {
                 score += LOSE_VALUE;
             }
         }
 
-        if (depth % 2 == 0) {
-            child.alpha = score;
-        } else {
-            child.beta = score;
-        }
+        return score;
     }
 
-    private void pickChild(int depth, Node child, Node parent) {
+    private void doProgress(int depth, long moves) {
+        if (depth + 1 >= progressDepth) {
 
-        if (depth % 2 == 0) {
-            if (child.alpha < parent.beta) {
-                parent.beta = child.alpha;
-                parent.chosenChild = child;
+            if (lastDepth == depth) {
+                return;
             }
-        } else {
-            if (child.beta > parent.alpha) {
-                parent.alpha = child.beta;
-                parent.chosenChild = child;
+            lastDepth = depth;
+
+            int element = goToDepth - depth;
+
+            if (element <= goToDepth - progressDepth) {
+
+                maxProgressTick[element] = Long.bitCount(moves) + 1;
+                progressTick[element] = 0;
             }
-        }
-    }
 
-    private void startProgress(int depth, int size) {
-        if (depth < progressDepth) {
+            element--;
 
-            if (size == 0) {
-                size = 1;
+            if (element >= 0) {
+                progressTick[element]++;
             }
-            maxProgressTick[depth] = size;
-            progressTick[depth] = 0;
-        }
-    }
-
-    private void countProgress(int depth) {
-        if (depth < progressDepth) {
-
-            progressTick[depth]++;
 
             updateProgress();
         }
@@ -247,35 +308,43 @@ public class ComplexAI extends AI {
         if (now - then > 50) {
             then = now;
 
-            double value = 0;
-            for (int i = progressDepth - 1; i >= 0; i--) {
-                value += progressTick[i];
-                value /= maxProgressTick[i];
-            }
-
-            double v = value;
             Platform.runLater(() -> {
-                progressProperty().set(v);
+                double value = 0;
+                for (int i = goToDepth - progressDepth; i >= 0; i--) {
+                    if (maxProgressTick[i] == 0) {
+                        continue;
+                    }
+
+                    value += progressTick[i];
+                    value /= maxProgressTick[i];
+                }
+
+                progressProperty().set(value);
             });
         }
+    }
+
+    public int getTargetDepth() {
+        return targetDepth;
+    }
+
+    public void setTargetDepth(int targetDepth) {
+        this.targetDepth = targetDepth;
+        progressDepth = Math.min(targetDepth, DEFUALT_PROGRESS_DEPTH);
     }
 
     protected static class Node {
 
         final Node parent;
-        final boolean noMove;
         final BitBoard bb;
         final long move;
-        Node chosenChild;
-        int alpha, beta;
+        protected Node chosenChild;
 
-        public Node(Node parent, BitBoard bb, long move, boolean noMove, int alpha, int beta) {
+        public Node(Node parent, BitBoard bb, long move) {
             this.parent = parent;
             this.bb = bb;
             this.move = move;
-            this.noMove = noMove;
-            this.alpha = alpha;
-            this.beta = beta;
         }
     }
+
 }

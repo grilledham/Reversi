@@ -51,6 +51,7 @@ public class Piece extends Region {
         KeyFrame kf3 = new KeyFrame(new Duration(500), new KeyValue(rotateProperty(), 180));
         flipTl = new Timeline(kf, kf2, kf3);
         flipTl.setOnFinished(e -> {
+            rotateProperty().set(0);
             if (replay) {
                 replay = false;
                 flipTl.play();

@@ -5,6 +5,12 @@
  */
 package reversi.ai;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import reversi.model.BitBoard;
 import reversi.model.GameModel;
 import reversi.model.Owner;
 
@@ -14,12 +20,8 @@ import reversi.model.Owner;
  */
 public class HybridAI extends ComplexAI {
 
-    private int edgeValue;
-    private int cornerValue;
-    private static double edgeWieght = 2d;
-    private static double cornerWieght = 16d;
-
-    private static final long EDGE = BitBoard.stringToBoard("01111110"
+    private static final long EDGE = BitBoard.stringToBoard(""
+            + "01111110"
             + "10000001"
             + "10000001"
             + "10000001"
@@ -28,7 +30,8 @@ public class HybridAI extends ComplexAI {
             + "10000001"
             + "01111110");
 
-    private static final long CORNER = BitBoard.stringToBoard("10000001"
+    private static final long CORNER = BitBoard.stringToBoard(""
+            + "10000001"
             + "00000000"
             + "00000000"
             + "00000000"
@@ -37,130 +40,158 @@ public class HybridAI extends ComplexAI {
             + "00000000"
             + "10000001");
 
-    public HybridAI(GameModel gm) {
-        super(gm);
+    private static final long INNER_EDGE = BitBoard.stringToBoard(""
+            + "01000010"
+            + "11111111"
+            + "01000010"
+            + "01000010"
+            + "01000010"
+            + "01000010"
+            + "11111111"
+            + "01000010");
+
+//    private static final long MIDDLE = BitBoard.stringToBoard(""
+//            + "00000000"
+//            + "00000000"
+//            + "00111100"
+//            + "00111100"
+//            + "00111100"
+//            + "00111100"
+//            + "00000000"
+//            + "00000000");
+    
+    private static final long MIDDLE = BitBoard.stringToBoard(""
+            + "00000000"
+            + "01111110"
+            + "01111110"
+            + "01111110"
+            + "01111110"
+            + "01111110"
+            + "01111110"
+            + "00000000");
+
+    private int cornerWieght = 64;
+    private int edgeWeight = 12;
+    private int middleWeight = 1;
+    private int innerEdgeWeight = -8;
+
+    //From worst to best.
+    private long[] proirityArray;
+    private int[] weights;
+
+    public HybridAI(GameModel gm, int color) {
+        super(gm, color);
     }
 
     @Override
-    protected void scoreChild(int depth, Node child, Node parent) {
-        //Owner[][] board = child.bb.getBoard();
-        int score = child.bb.calculateScoreDifference(turn);
+    protected int scoreChild(Node child) {
 
-        if (child.noMove && parent.noMove) {
+        if ((child.move == 0 && child.parent.move == 0)) {
+            int score = child.bb.calculateScoredifferenceForBlack();
             if (score > 0) {
                 score += WIN_VALUE;
             } else if (score < 0) {
                 score += LOSE_VALUE;
             }
-        } else {
-            score += getWeightValue(child.bb);
+            return score;
         }
 
-        if (depth % 2 == 0) {
-            child.alpha = score;
-        } else {
-            child.beta = score;
-        }
+        return getWeightValue(child.bb);
     }
 
     @Override
     protected void nextMoveHelper() {
 
+        System.out.println("remaningTurns: " + gm.getRemainingTurns());
+
         calculateWeights();
+        
         super.nextMoveHelper();
     }
 
+    @Override
+    protected long[] getSearchOrder(BitBoard bb) {
+        List<Long> list = BitBoard.split(bb.getEmptySquares());
+
+        Collections.sort(list, (l1, l2) -> getPriority(l2) - getPriority(l1));
+
+        long[] array = new long[list.size()];
+        for (int i = 0; i < list.size(); i++) {
+            array[i] = list.get(i);
+        }
+
+        return array;
+    }
+
+    private int getPriority(long move) {
+
+        for (int i = 0; i < proirityArray.length; i++) {
+            if ((move & proirityArray[i]) != 0) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     private void calculateWeights() {
+        //From worst to best.
+        proirityArray = new long[]{/*INNER_EDGE,*/MIDDLE, EDGE, CORNER};
+        weights = new int[]{/*INNER_EDGE_WIEGHT,*/middleWeight, edgeWeight, cornerWieght};
 
-        int remainingTurns = gm.getRemainingTurns();
-        int seenTurns = remainingTurns < MAX_DEPTH ? remainingTurns : MAX_DEPTH;
-
-        //System.out.println("remaining: " + remainingTurns + ", seen: " + seenTurns);
-        double ratio = ((double) remainingTurns / seenTurns);
-
-        edgeValue = (int) ((ratio - 1) * edgeWieght);
-        cornerValue = (int) ((ratio - 1) * cornerWieght);
-
-        //System.out.println("edge: " + edgeValue + ", corner: " + cornerValue);
+//
+//        int remainingTurns = gm.getRemainingTurns();
+//        int depth = getGoToDepth();
+//        int seenTurns = remainingTurns < depth ? remainingTurns : depth;
+//
+//        System.out.println("remaining: " + remainingTurns + ", seen: " + seenTurns);
+//        double ratio = ((double) remainingTurns / seenTurns);
+//
+//        edgeValue = (int) ((ratio - 1) * EDGE_WIEGHT);
+//        cornerValue = (int) ((ratio - 1) * CORNER_WIEGHT);
+//
+//        System.out.println("edge: " + edgeValue + ", corner: " + cornerValue);
     }
 
     private int getWeightValue(BitBoard board) {
-        int black = 0, white = 0;
+        int score = 0;
 
-        if (cornerValue != 0) {
-            black += (Long.bitCount(board.getBlackPieces() & CORNER) * cornerValue);
-            white += (Long.bitCount(board.getWhitePieces() & CORNER) * cornerValue);
+        for (int i = 0; i < proirityArray.length; i++) {
+            score += (Long.bitCount(board.getBlackPieces() & proirityArray[i]) * weights[i]);
+            score -= (Long.bitCount(board.getWhitePieces() & proirityArray[i]) * weights[i]);
         }
-        if (edgeValue != 0) {
-            black += (Long.bitCount(board.getBlackPieces() & EDGE) * edgeValue);
-            white += (Long.bitCount(board.getWhitePieces() & EDGE) * edgeValue);
-        }
-        if (turn.equals(Owner.BLACK)) {
-            return black - white;
-        } else {
-            return white - black;
-        }
+        return score;
     }
 
-    private int getWeightValue(Owner[][] board) {
-        int us = 0;
-        int them = 0;
-        int c = col - 1;
-        int r = row - 1;
-
-        if (cornerValue != 0) {
-
-            if (board[0][0] == turn) {
-                us += cornerValue;
-            } else {
-                them += cornerValue;
-            }
-            if (board[0][r] == turn) {
-                us += cornerValue;
-            } else {
-                them += cornerValue;
-            }
-            if (board[c][0] == turn) {
-                us += cornerValue;
-            } else {
-                them += cornerValue;
-            }
-            if (board[c][r] == turn) {
-                us += cornerValue;
-            } else {
-                them += cornerValue;
-            }
-        }
-
-        if (edgeValue != 0) {
-
-            for (int i = 1; i < c; i++) {
-                if (board[i][0] == turn) {
-                    us += edgeValue;
-                } else {
-                    them += edgeValue;
-                }
-                if (board[i][r] == turn) {
-                    us += edgeValue;
-                } else {
-                    them += edgeValue;
-                }
-            }
-            for (int i = 1; i < r; i++) {
-                if (board[0][i] == turn) {
-                    us += edgeValue;
-                } else {
-                    them += edgeValue;
-                }
-                if (board[c][i] == turn) {
-                    us += edgeValue;
-                } else {
-                    them += edgeValue;
-                }
-            }
-        }
-
-        return us - them;
+    public int getCornerWieght() {
+        return cornerWieght;
     }
 
+    public void setCornerWieght(int cornerWieght) {
+        this.cornerWieght = cornerWieght;
+    }
+
+    public int getEdgeWeight() {
+        return edgeWeight;
+    }
+
+    public void setEdgeWeight(int edgeWeight) {
+        this.edgeWeight = edgeWeight;
+    }
+
+    public int getMiddleWeight() {
+        return middleWeight;
+    }
+
+    public void setMiddleWeight(int middleWeight) {
+        this.middleWeight = middleWeight;
+    }
+
+    public int getInnerEdgeWeight() {
+        return innerEdgeWeight;
+    }
+
+    public void setInnerEdgeWeight(int innerEdgeWeight) {
+        this.innerEdgeWeight = innerEdgeWeight;
+    }   
+    
 }

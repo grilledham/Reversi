@@ -10,7 +10,7 @@ import java.util.List;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import reversi.ai.BitBoard;
+import reversi.model.BitBoard;
 import reversi.control.GameController;
 
 /**
@@ -31,5 +31,6 @@ public class Main extends Application {
 
     public static void main(String[] args) {
         launch(args);
+
     }
 }

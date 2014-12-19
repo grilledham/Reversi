@@ -6,12 +6,19 @@
 package reversi.view;
 
 import javafx.application.Platform;
+import javafx.beans.binding.BooleanBinding;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyCombination;
+import reversi.control.Editor;
 import reversi.control.GameController;
 import reversi.model.GameModel;
+import reversi.model.Owner;
 
 /**
  *
@@ -54,22 +61,68 @@ public class GameMenu extends MenuBar {
 
         MenuItem undoTurn = new MenuItem("Undo Turn");
         undoTurn.setAccelerator(KeyCombination.keyCombination("Ctrl+Z"));
-        undoTurn.setOnAction(e -> {            
+        undoTurn.setOnAction(e -> {
             gameController.undoTurn();
         });
         undoTurn.disableProperty().bind(gm.getBoardHistoryManager().UndoProperty().not());
 
         MenuItem redoTurn = new MenuItem("Redo Turn");
         redoTurn.setAccelerator(KeyCombination.keyCombination("Ctrl+X"));
-        redoTurn.setOnAction(e -> {            
+        redoTurn.setOnAction(e -> {
             gameController.redoTurn();
         });
         redoTurn.disableProperty().bind(gm.getBoardHistoryManager().RedoProperty().not());
 
-        MenuItem editMode = new MenuItem("Edit Mode");
+        MenuItem editMode = new MenuItem("Enter Edit Mode");
         editMode.setAccelerator(KeyCombination.keyCombination("Ctrl+E"));
+        Editor editor = gameController.getEditor();
+        editor.inEditedModeProperty().addListener((ob, ov, nv) -> {
+            if (nv) {
+                editMode.setText("Leave Edit Mode");
+            } else {
+                editMode.setText("Enter Edit Mode");
+            }
+        });
+
         editMode.setOnAction(e -> {
-            System.out.println("edit mode");
+            if (editor.inEditedModeProperty().get()) {
+                editor.leaveEditMode();
+            } else {
+                editor.enterEditMode();
+            }
+        });
+
+        ToggleGroup place = new ToggleGroup();
+        RadioMenuItem black = new RadioMenuItem("Place Black");
+        black.setSelected(true);
+        black.disableProperty().bind(editor.inEditedModeProperty().not());
+        black.setOnAction(e -> {
+            editor.selectionProperty().set(Owner.BLACK);
+        });
+        editor.selectionProperty().addListener((ob, ov, nv) -> {
+            if (nv == Owner.BLACK) {
+                black.setSelected(true);
+            }
+        });
+        black.setToggleGroup(place);
+
+        RadioMenuItem white = new RadioMenuItem("Place White");
+        white.setSelected(false);
+        white.disableProperty().bind(editor.inEditedModeProperty().not());
+        white.setOnAction(e -> {
+            editor.selectionProperty().set(Owner.WHITE);
+        });
+        editor.selectionProperty().addListener((ob, ov, nv) -> {
+            if (nv == Owner.WHITE) {
+                white.setSelected(true);
+            }
+        });
+        white.setToggleGroup(place);
+
+        MenuItem flip = new MenuItem("Flip side");
+        flip.disableProperty().bind(editor.inEditedModeProperty().not());
+        flip.setOnAction(e -> {
+            editor.flipSide();
         });
 
         MenuItem settingsMenuItem = new MenuItem("Settings");
@@ -79,7 +132,7 @@ public class GameMenu extends MenuBar {
         });
 
         file.getItems().addAll(newGame, save, load);
-        edit.getItems().addAll(undoTurn, redoTurn, editMode);
+        edit.getItems().addAll(undoTurn, redoTurn, new SeparatorMenuItem(), editMode, black, white, flip);
         options.getItems().addAll(settingsMenuItem);
         getMenus().addAll(file, edit, options);
     }

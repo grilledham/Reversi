@@ -11,7 +11,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import reversi.ai.BitBoard;
 
 /**
  *
@@ -200,5 +199,14 @@ public class BoardModel {
     public Owner getTurn() {
         return turn;
     }
+
+    public int getColumns() {
+        return columns;
+    }
+
+    public int getRows() {
+        return rows;
+    }
+    
 
 }

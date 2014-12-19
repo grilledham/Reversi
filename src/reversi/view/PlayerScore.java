@@ -68,7 +68,7 @@ public class PlayerScore extends StackPane {
             foregroundColor = Color.WHITE;
             player.setText("Black");
             playerType.setText(gc.getSettings().getBlackPlayer().toString());
-            score.textProperty().bind(scoreString.asString().concat(gm.blackScoreProperty().asString("%3d")));
+            score.textProperty().bind(scoreString.asString().concat(gm.blackScoreProperty().asString("%2d")));
 
             yourMoveFT.play();
             gm.turnProperty().addListener((ob, ov, nv) -> {
@@ -76,6 +76,9 @@ public class PlayerScore extends StackPane {
                     yourMoveFT.setRate(1);
                     yourMoveFT.play();
                 } else {
+                    if (yourMoveFT.getRate() == -1) {
+                        return;
+                    }
                     yourMoveFT.setRate(-1);
                     yourMoveFT.play();
                 }
@@ -84,7 +87,7 @@ public class PlayerScore extends StackPane {
                 if (nv) {
                     noMoveFT.setRate(1);
                     noMoveFT.play();
-                } else {
+                } else {                    
                     noMoveFT.setRate(-1);
                     noMoveFT.play();
                 }
@@ -111,13 +114,16 @@ public class PlayerScore extends StackPane {
             foregroundColor = Color.BLACK;
             player.setText("White");
             playerType.setText(gc.getSettings().getWhitePlayer().toString());
-            score.textProperty().bind(scoreString.asString().concat(gm.whiteScoreProperty().asString("%3d")));
+            score.textProperty().bind(scoreString.asString().concat(gm.whiteScoreProperty().asString("%2d")));
 
             gm.turnProperty().addListener((ob, ov, nv) -> {
                 if (nv.equals(Owner.WHITE)) {
                     yourMoveFT.setRate(1);
                     yourMoveFT.play();
                 } else {
+                    if (yourMoveFT.getRate() == -1) {
+                        return;
+                    }
                     yourMoveFT.setRate(-1);
                     yourMoveFT.play();
                 }
