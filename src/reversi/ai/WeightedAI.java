@@ -18,7 +18,7 @@ import reversi.model.Owner;
  *
  * @author James
  */
-public class HybridAI extends ComplexAI {
+public class WeightedAI extends MinMaxAI {
 
     private static final long EDGE = BitBoard.stringToBoard(""
             + "01111110"
@@ -79,7 +79,7 @@ public class HybridAI extends ComplexAI {
     private long[] proirityArray;
     private int[] weights;
 
-    public HybridAI(GameModel gm, int color) {
+    public WeightedAI(GameModel gm, int color) {
         super(gm, color);
     }
 

@@ -6,8 +6,9 @@
 package reversi.control;
 
 import reversi.ai.AI;
-import reversi.ai.ComplexAI;
-import reversi.ai.HybridAI;
+import reversi.ai.MinMaxAI;
+import reversi.ai.WeightedAI;
+import reversi.ai.RandomAI;
 import reversi.ai.SimpleAI;
 import reversi.model.BitBoard;
 import reversi.model.GameModel;
@@ -33,31 +34,35 @@ public class Player {
                 ai = new SimpleAI(gm, color);
                 break;
             }
-            case COMPLEX_AI: {
-                ai = new ComplexAI(gm, color);
-                ComplexAI c = (ComplexAI) ai;
+            case RANDOM_AI: {
+                ai = new RandomAI(gm, color);
+                break;
+            }
+            case MINMAX_AI: {
+                ai = new MinMaxAI(gm, color);
+                MinMaxAI a = (MinMaxAI) ai;
                 if (color == BitBoard.BLACK_COLOR) {
-                    c.setTargetDepth(s.getBlackTargetDepth());
+                    a.setTargetDepth(s.getBlackTargetDepth());
                 } else {
-                    c.setTargetDepth(s.getWhiteTargetDepth());
+                    a.setTargetDepth(s.getWhiteTargetDepth());
                 }
                 break;
             }
-            case HYBRID_AI: {
-                ai = new HybridAI(gm, color);
-                HybridAI h = (HybridAI) ai;
+            case WEIGHTED_AI: {
+                ai = new WeightedAI(gm, color);
+                WeightedAI a = (WeightedAI) ai;
                 if (color == BitBoard.BLACK_COLOR) {
-                    h.setTargetDepth(s.getBlackTargetDepth());
-                    h.setCornerWieght(s.getBlackCornerWeight());
-                    h.setEdgeWeight(s.getBlackEdgeWeight());
-                    h.setInnerEdgeWeight(s.getBlackInnerEdgeWeight());
-                    h.setMiddleWeight(s.getBlackMiddleWeight());
+                    a.setTargetDepth(s.getBlackTargetDepth());
+                    a.setCornerWieght(s.getBlackCornerWeight());
+                    a.setEdgeWeight(s.getBlackEdgeWeight());
+                    a.setInnerEdgeWeight(s.getBlackInnerEdgeWeight());
+                    a.setMiddleWeight(s.getBlackMiddleWeight());
                 } else {
-                    h.setTargetDepth(s.getWhiteTargetDepth());
-                    h.setCornerWieght(s.getWhiteCornerWeight());
-                    h.setEdgeWeight(s.getWhiteEdgeWeight());
-                    h.setInnerEdgeWeight(s.getWhiteInnerEdgeWeight());
-                    h.setMiddleWeight(s.getWhiteMiddleWeight());
+                    a.setTargetDepth(s.getWhiteTargetDepth());
+                    a.setCornerWieght(s.getWhiteCornerWeight());
+                    a.setEdgeWeight(s.getWhiteEdgeWeight());
+                    a.setInnerEdgeWeight(s.getWhiteInnerEdgeWeight());
+                    a.setMiddleWeight(s.getWhiteMiddleWeight());
                 }
                 break;
             }

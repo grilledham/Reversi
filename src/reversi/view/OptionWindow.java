@@ -5,8 +5,7 @@
  */
 package reversi.view;
 
-import java.util.Collection;
-import java.util.List;
+import javafx.application.Platform;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
@@ -64,6 +63,9 @@ public class OptionWindow extends Stage {
     private final Label whiteInnerEdgeWeightLabel = new Label();
     private final Label whiteMiddleWeightLabel = new Label();
 
+    private final Label aiDelayLabel;
+    private final Slider aiDelaySlider;
+
     public OptionWindow(GameController gc) {
         this.gc = gc;
         settings = gc.getSettings();
@@ -96,7 +98,7 @@ public class OptionWindow extends Stage {
         blackGrid.addRow(2, makeLabelSliderPair("corner weight:", blackCornerWeightLabel, blackCornerWeightSlider, -16, 128, settings.getBlackCornerWeight(), blackCombo, true));
         blackGrid.addRow(3, makeLabelSliderPair("edge weight:", blackEdgeWeightLabel, blackEdgeWeightSlider, -16, 128, settings.getBlackEdgeWeight(), blackCombo, true));
         blackGrid.addRow(4, makeLabelSliderPair("inner edge weight:", blackInnerEdgeWeightLabel, blackInnerEdgeWeightSlider, -16, 128, settings.getBlackInnerEdgeWeight(), blackCombo, true));
-        blackGrid.addRow(5, makeLabelSliderPair("middle weight:", blackMiddleWeightLabel, blackMiddleWeightSlider, -16, 128, settings.getBlackMiddleWeight(), blackCombo, true));        
+        blackGrid.addRow(5, makeLabelSliderPair("middle weight:", blackMiddleWeightLabel, blackMiddleWeightSlider, -16, 128, settings.getBlackMiddleWeight(), blackCombo, true));
 
         whiteGrid.add(whitePlayer, 0, 0);
         whiteGrid.add(whiteCombo, 2, 0);
@@ -111,11 +113,45 @@ public class OptionWindow extends Stage {
         whiteGrid.setPadding(new Insets(5));
         gp.add(blackGrid, 0, 0);
         gp.add(whiteGrid, 1, 0);
+
+        Label delayText = new Label("Min ai delay: ");
+        aiDelaySlider = new Slider(0, 3000, settings.getMinAIDelay());
+        //aiDelaySlider.setBlockIncrement(100);
+        aiDelaySlider.setSnapToTicks(true);
+        aiDelaySlider.setMajorTickUnit(100);
+        aiDelaySlider.setMinorTickCount(0);
+        aiDelaySlider.setOnScroll(e -> {
+            aiDelaySlider.setValue(aiDelaySlider.getValue() + 100 * Math.signum(e.getDeltaY()));
+        });
+        aiDelayLabel = new Label();
+        aiDelayLabel.setPrefWidth(45);
+        aiDelayLabel.setAlignment(Pos.BASELINE_RIGHT);
+        aiDelayLabel.textProperty().bind(new StringRounded(aiDelaySlider.valueProperty(), 100));
+        aiDelayLabel.setPadding(new Insets(0, 10, 0, 0));
+        HBox delayBox = new HBox(delayText, aiDelayLabel, aiDelaySlider);
+        delayBox.setPadding(new Insets(20, 0, 0, 0));
+
+        gp.add(delayBox, 0, 1);
+
         gp.setPadding(new Insets(10));
+
+        Button applyAndNew = new Button("New Game");
+        applyAndNew.setOnAction(e -> {
+            makeResults();
+            gc.setSettings(settings);
+            Platform.runLater(() -> {
+                gc.reset();
+            });
+            hide();
+        });
 
         Button apply = new Button("Apply");
         apply.setOnAction(e -> {
             makeResults();
+            gc.setSettings(settings);
+            Platform.runLater(() -> {
+                gc.updateSettings();
+            });
             hide();
         });
 
@@ -124,7 +160,7 @@ public class OptionWindow extends Stage {
             hide();
         });
 
-        HBox hBox = new HBox(apply, cancel);
+        HBox hBox = new HBox(applyAndNew, apply, cancel);
         hBox.setSpacing(10);
         hBox.setAlignment(Pos.BOTTOM_RIGHT);
 
@@ -157,6 +193,8 @@ public class OptionWindow extends Stage {
         settings.setWhiteEdgeWeight((int) whiteEdgeWeightSlider.getValue());
         settings.setWhiteInnerEdgeWeight((int) whiteInnerEdgeWeightSlider.getValue());
         settings.setWhiteMiddleWeight((int) whiteMiddleWeightSlider.getValue());
+
+        settings.setMinAIDelay((int) aiDelaySlider.getValue());
     }
 
     public Settings getSettings() {
@@ -168,8 +206,9 @@ public class OptionWindow extends Stage {
         slider.setMax(high);
         slider.setValue(start);
         slider.setPrefWidth(245);
+        slider.setBlockIncrement(1);
 
-        label.textProperty().bind(new StringRounded(slider.valueProperty()));
+        label.textProperty().bind(new StringRounded(slider.valueProperty(), 1));
         label.setPrefWidth(35);
         label.setMaxWidth(35);
         label.setPadding(new Insets(0, 10, 0, 0));
@@ -179,16 +218,20 @@ public class OptionWindow extends Stage {
         word.setAlignment(Pos.BASELINE_RIGHT);
 
         PlayerType pt = player.getValue();
-        boolean disable = (pt == PlayerType.HUMAN || pt == PlayerType.SIMPLE_AI || (pt == PlayerType.COMPLEX_AI && isWeight));
+        boolean disable = (pt == PlayerType.HUMAN || pt == PlayerType.SIMPLE_AI || pt == PlayerType.RANDOM_AI || (pt == PlayerType.MINMAX_AI && isWeight));
         label.setDisable(disable);
         slider.setDisable(disable);
         word.setDisable(disable);
-        
+
         player.valueProperty().addListener((ob, ov, nv) -> {
-            boolean disable2 = (nv == PlayerType.HUMAN || nv == PlayerType.SIMPLE_AI || (nv == PlayerType.COMPLEX_AI && isWeight));
+            boolean disable2 = (nv == PlayerType.HUMAN || nv == PlayerType.SIMPLE_AI || nv == PlayerType.RANDOM_AI || (nv == PlayerType.MINMAX_AI && isWeight));
             label.setDisable(disable2);
             slider.setDisable(disable2);
             word.setDisable(disable2);
+        });
+
+        slider.setOnScroll(e -> {
+            slider.setValue(slider.getValue() + Math.signum(e.getDeltaY()));
         });
 
         return new Node[]{word, label, slider};
@@ -197,15 +240,17 @@ public class OptionWindow extends Stage {
     private static class StringRounded extends ObjectBinding<String> {
 
         private final DoubleProperty value;
+        private final double round;
 
-        public StringRounded(DoubleProperty value) {
+        public StringRounded(DoubleProperty value, double round) {
             this.value = value;
+            this.round = round;
             bind(value);
         }
 
         @Override
         protected String computeValue() {
-            return Integer.toString((int) value.get());
+            return Integer.toString((int) (Math.floor(value.get() / round) * round));
         }
     }
 }

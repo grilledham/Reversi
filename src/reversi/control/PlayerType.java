@@ -6,8 +6,8 @@
 package reversi.control;
 
 import reversi.ai.AI;
-import reversi.ai.ComplexAI;
-import reversi.ai.HybridAI;
+import reversi.ai.MinMaxAI;
+import reversi.ai.WeightedAI;
 import reversi.ai.SimpleAI;
 import reversi.model.GameModel;
 
@@ -19,8 +19,9 @@ public enum PlayerType {
 
     HUMAN,
     SIMPLE_AI,
-    COMPLEX_AI,
-    HYBRID_AI;
+    RANDOM_AI,
+    MINMAX_AI,
+    WEIGHTED_AI;
 
     public boolean isHuman() {
         return this.equals(HUMAN);

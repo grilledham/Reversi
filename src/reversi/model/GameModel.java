@@ -86,6 +86,7 @@ public class GameModel {
 
     public void resetBoard() {
         board.resetBoard();
+        boardHistoryManager.reset();
         initBoard();
     }
 

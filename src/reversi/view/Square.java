@@ -80,7 +80,7 @@ public class Square extends StackPane {
                 startFullDrag();
             }
         });
-        setOnMouseDragEntered(e -> {
+        setOnMouseDragEntered(e -> {            
             if (gc.getEditor().inEditedModeProperty().get()) {
                 gc.getEditor().processClick(e, x, y);
             }

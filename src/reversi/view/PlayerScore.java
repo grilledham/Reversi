@@ -174,7 +174,7 @@ public class PlayerScore extends StackPane {
 
         vb.setAlignment(Pos.CENTER);
         vb.setPadding(new Insets(10));
-        vb.setMinWidth(240);
+        vb.setMinWidth(280);
 
         vb.getChildren().addAll(player, playerType, score, noMove, win);
         getChildren().addAll(vb, fade);

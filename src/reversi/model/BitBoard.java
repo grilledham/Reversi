@@ -569,4 +569,31 @@ public class BitBoard {
         return blackPieces;
     }
 
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 59 * hash + (int) (this.whitePieces ^ (this.whitePieces >>> 32));
+        hash = 59 * hash + (int) (this.blackPieces ^ (this.blackPieces >>> 32));
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final BitBoard other = (BitBoard) obj;
+        if (this.whitePieces != other.whitePieces) {
+            return false;
+        }
+        if (this.blackPieces != other.blackPieces) {
+            return false;
+        }
+        return true;
+    }
+    
+
 }

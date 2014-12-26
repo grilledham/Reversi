@@ -26,6 +26,8 @@ public class GameView extends StackPane {
     private GameController gameController;
     private Board board;
     private BorderPane borderPane;
+    private PlayerScore black;
+    private PlayerScore white;
 
     public GameView(GameController gameContorller) {
         this.gameController = gameContorller;
@@ -49,8 +51,8 @@ public class GameView extends StackPane {
         borderPane.setCenter(board);
         BorderPane.setMargin(board, new Insets(3, 1, 3, 1));
 
-        PlayerScore black = new PlayerScore(Owner.BLACK, gameController);
-        PlayerScore white = new PlayerScore(Owner.WHITE, gameController);
+        black = new PlayerScore(Owner.BLACK, gameController);
+        white = new PlayerScore(Owner.WHITE, gameController);
         StatusBar sb = new StatusBar(gameController);
 
         BorderPane.setMargin(black, new Insets(3));
@@ -65,10 +67,16 @@ public class GameView extends StackPane {
         getChildren().setAll(borderPane);
 
     }
-    public void updateBoard(){
+
+    public void resetPlayerScore() {
+        black = new PlayerScore(Owner.BLACK, gameController);
+        white = new PlayerScore(Owner.WHITE, gameController);
+    }
+
+    public void updateBoard() {
         board.updateBoard();
     }
- 
+
     public GameModel getGameModel() {
         return gameModel;
     }

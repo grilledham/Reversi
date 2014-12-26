@@ -78,6 +78,7 @@ public class Editor {
         }
         inEditedMode.set(true);
         gc.blockUserProperty().set(true);
+        gc.stopAI();
         changesMade = false;
     }
 

@@ -47,6 +47,9 @@ public class GameController {
 
         currentPlayer = new SimpleObjectProperty<>();
 
+        gameModel = new GameModel(settings.getColumns(), settings.getRows());
+        editor = new Editor(this);
+
         intiGame();
 
     }
@@ -94,6 +97,13 @@ public class GameController {
         requestCurrentPlayerMove();
     }
 
+    public void stopAI() {
+        if (currentPlayer.get().isAI()) {
+            currentPlayer.get().getAI().setIsStopped(true);
+            pt.stop();
+        }
+    }
+
     public void gotoTurn(int turn) {
 
     }
@@ -102,15 +112,19 @@ public class GameController {
 
     }
 
-    public void reset() {//Settings settings) {
+    public void reset() {
+        gameModel = new GameModel(settings.getColumns(), settings.getRows());
+        editor = new Editor(this);
         intiGame();
         stage.getScene().setRoot(gameView);
+    }
 
+    public void updateSettings() {
+        intiGame();
+        stage.getScene().setRoot(gameView);
     }
 
     private void intiGame() {
-        gameModel = new GameModel(settings.getColumns(), settings.getRows());
-        editor = new Editor(this);
         gameMenu = new GameMenu(this);
 
         finished = new SimpleBooleanProperty(false);
@@ -138,6 +152,10 @@ public class GameController {
     }
 
     private void requestCurrentPlayerMove() {
+        if (editor.inEditedModeProperty().get()) {
+            return;
+        }
+
         if (gameModel.blackWinProperty().get()
                 || gameModel.whiteWinProperty().get()
                 || gameModel.drawProperty().get()) {
@@ -165,10 +183,10 @@ public class GameController {
         finished.set(false);
 
         go.bind(finished.and(ai.ReadyProperty()));
-        pt.play();
 
         ai.requestNextMove();
 
+        pt.play();
     }
 
     private void setCurrentPlayer() {

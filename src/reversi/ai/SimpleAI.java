@@ -15,11 +15,11 @@ import reversi.model.GameModel;
  * Assigns a priority to every square on the board. When
  * {@code requestNextMove()} is called sets {@code nextMove} to the highest
  * priority square that is a legal move.
- * <br> 
  * <br>
- * For a standard 8 by 8 board the priorities are: 
  * <br>
- * <br> 
+ * For a standard 8 by 8 board the priorities are:
+ * <br>
+ * <br>
  * (+64,+20,+36,+31,+31,+36,+20,+64) <br>
  * (+20,-24, -8,-13,-13, -8,-24,+20) <br>
  * (+36, -8, +8, +3, +3, +8, -8,+36) <br>
@@ -44,7 +44,7 @@ public class SimpleAI extends AI {
 
     public SimpleAI(GameModel gm, int color) {
         super(gm, color);
-        initPriority();        
+        initPriority();
     }
 
     @Override
@@ -55,11 +55,11 @@ public class SimpleAI extends AI {
     @Override
     public void requestNextMove() {
         readyProperty().set(false);
-        isStopped=false;
+        isStopped = false;
 
         int x = -1;
         int y = -1;
-        
+
         SimpleBooleanProperty[][] legalMoves = gm.legalMovesProperty();
 
         for (int i = 0; i < priorityList.size(); i++) {
@@ -71,19 +71,19 @@ public class SimpleAI extends AI {
             }
         }
 
-        nextMove = new Point(x, y);
-
-        if(isStopped){            
+        if (isStopped) {
             return;
         }
-        
+
+        nextMove = new Point(x, y);
+
         readyProperty().set(true);
     }
 
     @Override
     public Point suggestMove() {
         return getMove();
-    }    
+    }
 
     private void initPriority() {
         cols = gm.getColumns();
@@ -96,8 +96,8 @@ public class SimpleAI extends AI {
 
         for (int x = 0; x < cols; x++) {
             for (int y = 0; y < rows; y++) {
-                priorityList.add(determinePriority(x, y));                
-            }            
+                priorityList.add(determinePriority(x, y));
+            }
         }
 
         priorityList.sort((p1, p2) -> p2.priority - p1.priority);

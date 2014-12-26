@@ -16,7 +16,7 @@ import reversi.model.Owner;
  *
  * @author James
  */
-public class ComplexAI extends AI {
+public class MinMaxAI extends AI {
 
     protected static final int WIN_VALUE = 1000000;
     protected static final int LOSE_VALUE = -1000000;
@@ -38,11 +38,16 @@ public class ComplexAI extends AI {
     private long then;
     private long now;
 
-    public ComplexAI(GameModel gm, int color) {
+    private TranspositionTable tt;
+    private int hitCount;
+
+    public MinMaxAI(GameModel gm, int color) {
         super(gm, color);
 
         col = gm.getColumns();
         row = gm.getRows();
+
+        tt = new TranspositionTable(1 << 21);
     }
 
     /**
@@ -88,6 +93,9 @@ public class ComplexAI extends AI {
     protected void nextMoveHelper() {
         long start = System.currentTimeMillis();
 
+        tt.clear();
+        hitCount = 0;
+
         if (gm.getRemainingTurns() - targetDepth <= lastDepthThreshold) {
             goToDepth = targetDepth + lastDepthThreshold + 1;
         } else {
@@ -107,8 +115,8 @@ public class ComplexAI extends AI {
         int score = 0;
 
         try {
-            score = negaMax(root, goToDepth, -Integer.MAX_VALUE, Integer.MAX_VALUE, playerColor);
-            //score = negaScout(root, goToDepth, -Integer.MAX_VALUE, Integer.MAX_VALUE, playerColor);
+            //score = negaMax(root, goToDepth, -Integer.MAX_VALUE, Integer.MAX_VALUE, playerColor);
+            score = negaScout(root, goToDepth, -Integer.MAX_VALUE, Integer.MAX_VALUE, playerColor, true);
         } catch (InterruptedException e) {
         }
 
@@ -118,6 +126,7 @@ public class ComplexAI extends AI {
 
         System.out.println("Player: " + playerColor);
         System.out.println("score: " + score);
+        System.out.println("hitCount: " + hitCount);
 
         nextMove = BitBoard.longToPoint(root.chosenChild.move);
         suggestMove = BitBoard.longToPoint(root.chosenChild.chosenChild.move);
@@ -147,8 +156,7 @@ public class ComplexAI extends AI {
 
         long list = parent.bb.getLegalMove(color);
 
-        doProgress(depth, list);
-
+        //startProgress(depth, list,true);
         if (list == 0) {
 
             if (parent.move == 0) {
@@ -168,19 +176,18 @@ public class ComplexAI extends AI {
 
         } else {
 
+            int score;
             for (long l : searchOrder) {
                 if ((l & list) != 0) {
                     BitBoard bb = new BitBoard(parent.bb);
                     bb.takeTurn(l, color);
                     Node child = new Node(parent, bb, l);
 
-                    int score;
 //                    if ((l & BitBoard.CORNERS) != 0 && depth < 3) {
 //                        score = -negaMax(child, depth + 1, -beta, -alpha, -color);
 //                    } else {
 //                        score = -negaMax(child, depth - 1, -beta, -alpha, -color);
 //                    }
-
                     score = -negaMax(child, depth - 1, -beta, -alpha, -color);
 
                     if (alpha < score) {
@@ -197,7 +204,7 @@ public class ComplexAI extends AI {
         }
     }
 
-    private int negaScout(Node parent, int depth, int alpha, int beta, int color) throws InterruptedException {
+    private int negaScout(Node parent, int depth, int alpha, int beta, int color, boolean countProgress) throws InterruptedException {
         if (isStopped) {
             throw new InterruptedException();
         }
@@ -208,7 +215,6 @@ public class ComplexAI extends AI {
 
         long list = parent.bb.getLegalMove(color);
 
-        doProgress(depth, Long.bitCount(list));
         if (list == 0) {
 
             if (parent.move == 0) {
@@ -218,7 +224,7 @@ public class ComplexAI extends AI {
                 BitBoard bb = new BitBoard(parent.bb);
                 Node child = new Node(parent, bb, 0);
 
-                int score = -negaScout(child, depth - 1, -beta, -alpha, -color);
+                int score = -negaScout(child, depth, -beta, -alpha, -color, true);
                 if (alpha < score) {
                     parent.chosenChild = child;
                     alpha = score;
@@ -228,22 +234,23 @@ public class ComplexAI extends AI {
 
         } else {
 
+            startProgress(depth, list);
+
+            boolean first = true;
+            int score;
             for (long l : searchOrder) {
                 if ((l & list) != 0) {
                     BitBoard bb = new BitBoard(parent.bb);
                     bb.takeTurn(l, color);
                     Node child = new Node(parent, bb, l);
 
-                    int score = 0;
-                    boolean first = true;
-
                     if (first) {
                         first = false;
-                        score = -negaScout(child, depth - 1, -beta, -alpha, -color);
+                        score = -negaScout(child, depth - 1, -beta, -alpha, -color, true);
                     } else {
-                        score = -negaScout(child, depth - 1, -alpha - 1, -alpha, -color);
+                        score = -negaScout(child, depth - 1, -alpha - 1, -alpha, -color, false);
                         if (alpha < score && score < beta) {
-                            score = -negaScout(child, depth - 1, -beta, -score, -color);
+                            score = -negaScout(child, depth - 1, -beta, -score, -color, true);
                         }
                     }
 
@@ -251,11 +258,15 @@ public class ComplexAI extends AI {
                         parent.chosenChild = child;
                         alpha = score;
                     }
-                }
-                if (beta <= alpha) {
-                    break;
+
+                    if (beta <= alpha) {
+                        break;
+                    }
+
+                    countProgress(depth, countProgress);
                 }
             }
+
             return alpha;
         }
     }
@@ -275,28 +286,20 @@ public class ComplexAI extends AI {
         return score;
     }
 
-    private void doProgress(int depth, long moves) {
-        if (depth + 1 >= progressDepth) {
-
-            if (lastDepth == depth) {
-                return;
-            }
-            lastDepth = depth;
+    private void startProgress(int depth, long moves) {
+        if (depth > progressDepth) {
 
             int element = goToDepth - depth;
 
-            if (element <= goToDepth - progressDepth) {
+            maxProgressTick[element] = Long.bitCount(moves) + 1;
+            progressTick[element] = 0;
 
-                maxProgressTick[element] = Long.bitCount(moves) + 1;
-                progressTick[element] = 0;
-            }
+        }
+    }
 
-            element--;
-
-            if (element >= 0) {
-                progressTick[element]++;
-            }
-
+    private void countProgress(int depth, boolean countProgress) {
+        if (countProgress && depth > progressDepth) {
+            progressTick[goToDepth - depth]++;
             updateProgress();
         }
     }

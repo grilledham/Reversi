@@ -38,7 +38,7 @@ public class Settings {
         this.columns = DEFAULT_SIZE;
         this.rows = DEFAULT_SIZE;
 
-        this.whitePlayer = PlayerType.HYBRID_AI;
+        this.whitePlayer = PlayerType.WEIGHTED_AI;
         this.blackPlayer = PlayerType.HUMAN;
         this.blackTargetDepth = DEFAULT_TARGET_DEPTH;
         this.blackCornerWeight = DEFAULT_CORNER_WEIGHT;
